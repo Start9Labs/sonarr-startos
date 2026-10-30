@@ -8,7 +8,7 @@ const inputSpec = InputSpec.of({
   mediaSources: Value.multiselect({
     name: i18n('Media Storage'),
     description: i18n(
-      '- FileBrowser Quantum: mounted at /mnt/filebrowser\n- NextExplorer: mounted at /mnt/nextexplorer, one folder per drive, such as /mnt/nextexplorer/Files',
+      '- FileBrowser Quantum: mounted at /mnt/filebrowser\n- NextExplorer: mounted at /mnt/nextexplorer, one folder per location, such as /mnt/nextexplorer/Files',
     ),
     values: {
       filebrowser: i18n('FileBrowser Quantum'),

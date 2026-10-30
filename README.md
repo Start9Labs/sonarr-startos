@@ -4,12 +4,15 @@
 
 # Sonarr on StartOS
 
-> Everything not listed in this document should behave the same as upstream
-> Sonarr. If a feature, setting, or behavior is not mentioned here, the upstream
+> Everything not listed in this document should behave the same as upstream Sonarr.
+> If a feature, setting, or behavior is not mentioned here, the upstream
 > documentation is accurate and fully applicable — see the Documentation section of
 > `instructions.md` for links.
 
-[Sonarr](https://github.com/Sonarr/Sonarr) is a PVR for TV shows: it watches indexers for new episodes, hands them to a download client, and imports the finished files into a media library.
+[Sonarr](https://github.com/Sonarr/Sonarr) is a PVR for TV shows: it watches for new episodes of the series you follow, sends releases to a download client, and imports the finished files into a library. This package owns Sonarr's API key and admin login, closes the first-run "create a login" screen, manages the qBittorrent download client, publishes its API key for Prowlarr, and keeps the library in FileBrowser Quantum or NextExplorer — the same place qBittorrent saves to and Jellyfin reads from.
+
+- **Upstream repo:** <https://github.com/Sonarr/Sonarr>
+- **Wrapper repo:** <https://github.com/Start9Labs/sonarr-startos>
 
 ---
 
@@ -32,143 +35,192 @@
 
 ## Image and Container Runtime
 
-The package runs the unmodified `lscr.io/linuxserver/sonarr` image for x86_64 and aarch64.
+The LinuxServer image, run unmodified through its own s6-overlay entrypoint.
 
-- One subcontainer, `sonarr-sub`, running the image's s6-overlay entrypoint as PID 1, with `PUID=1000`, `PGID=1000`, `TZ=Etc/UTC`. Sonarr itself runs as uid 1000 (`abc`).
-- A post-start step, `reconcile`, runs in the package's own JavaScript context once Sonarr is ready. Through Sonarr's API it applies the stored admin password (only if it no longer logs in) and creates, updates or deletes the package-managed qBittorrent download client. A failed API call is logged with its method, path and status.
+| Property      | Value                                       |
+| ------------- | ------------------------------------------- |
+| Image         | `lscr.io/linuxserver/sonarr`                |
+| Architectures | x86_64, aarch64                             |
+| Command       | The image's `/init`, as PID 1 (`runAsInit`) |
+| Environment   | `PUID=1000`, `PGID=1000`, `TZ=Etc/UTC`      |
+
+| Subcontainer | Purpose                                       |
+| ------------ | --------------------------------------------- |
+| `sonarr-sub` | The `primary` daemon — the one to `attach` to |
+
+Sonarr runs as uid 1000 (`abc`). The image's init re-owns `/config` to that uid on every boot, so files the package writes there as root are fine. In-app updates are disabled by the image (`UpdateMechanism=Docker`); Sonarr is updated by updating the package.
+
+The `reconcile` oneshot runs in the package's JavaScript context once `primary` is ready, on every start, against Sonarr's API on `127.0.0.1:8989` with the stored API key:
+
+- **Login.** If the stored password no longer logs in, it reads `GET /api/v3/config/host` and `PUT`s it back with Forms authentication, authentication required, username `admin` and the stored password, so a credential changed in Sonarr's settings is reverted at the next start.
+- **qBittorrent download client.** While qBittorrent is connected, it creates or updates a QBittorrent download client named `qBittorrent (StartOS)` (the name is unique, so it cannot collide with a client you named `qBittorrent`) at qBittorrent's bridge address, authenticating with qBittorrent's Web API key and no username or password, and records its id in `store.json` as `qbittorrentClientId`. It finds that client by the recorded id, or by its name when no id was recorded, so a start interrupted after the create never leaves a second client behind. Disconnected, it deletes that one client. Clients you add yourself are never touched, unless you name one `qBittorrent (StartOS)` in any letter case. A new client is created disabled and then enabled with `forceSave`, because Sonarr tests an enabled client on create even with `forceSave`.
 
 ## Volume and Data Layout
 
-The package's own state and Sonarr's app data are on separate volumes; media lives in a file manager's volume.
+Two volumes of its own, plus a read-write mount of each file manager the user selects.
 
-| Volume / mount                            | Mount point         | Contents                                                                                                |
-| ----------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------- |
-| `main`                                    | `/config`           | Sonarr's app data: `config.xml`, `sonarr.db` and `logs.db` (SQLite), `MediaCover/`, `logs/`, `Backups/` |
-| `startos`                                 | (not mounted)       | `store.json`; `share/api-key`                                                                           |
-| FileBrowser Quantum `data`, if selected   | `/mnt/filebrowser`  | Read-write; the TV library and qBittorrent's downloads                                                  |
-| NextExplorer `data`, if selected          | `/mnt/nextexplorer` | Read-write; one folder per drive, such as `/mnt/nextexplorer/Files`                                     |
-| qBittorrent `main` `share/`, if connected | `/mnt/qbittorrent`  | Read-only; qBittorrent's Web API key, `api-key`                                                         |
+| Volume                        | Mount Point         | Purpose                                                                                                      |
+| ----------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `main`                        | `/config`           | `config.xml`, `sonarr.db`, `logs.db`, `MediaCover/`, `logs/`, and Sonarr's own scheduled database copies     |
+| `startos`                     | not mounted         | `store.json`; `share/api-key`                                                                                |
+| `filebrowser` `data`          | `/mnt/filebrowser`  | TV library and qBittorrent downloads, when FileBrowser Quantum is selected                                   |
+| `nextexplorer` `data`         | `/mnt/nextexplorer` | TV library and qBittorrent downloads, when NextExplorer is selected; one directory per NextExplorer location |
+| `qbittorrent` `main` `share/` | `/mnt/qbittorrent`  | Read-only, while connected; qBittorrent's Web API key, `api-key`                                             |
 
-The file-manager mounts are at the same paths qBittorrent saves to and Jellyfin reads from, so no remote path mappings are needed, and imports hardlink when the download and the root folder are in the same file manager.
+**The mount points are a contract with qBittorrent and Jellyfin.** qBittorrent mounts the same volumes at the same paths, so a path qBittorrent reports for a finished download is the path Sonarr sees: no remote path mapping is needed, and a root folder on the same volume as the download lets Sonarr hardlink instead of copy. Changing either mount point breaks that.
 
 ## File Models
 
-The package owns three files.
+Three models.
 
-- **`store.json`** (`startos` volume) — `apiKey` (32 hex characters, generated on install), `adminPassword` (written by **Set Admin Password**), `mediaSources` (written by **Media Storage**), `qbittorrentConnected` (toggled by **Connect qBittorrent**), and `qbittorrentClientId` (the id of the download client `reconcile` manages). A change to any of the first four restarts Sonarr.
-- **`share/api-key`** (`startos` volume) — the bare API key, no newline, rewritten from `store.json` on every init. This is the interface dependents read: Prowlarr mounts `share/` read-only to connect to Sonarr.
-- **`config.xml`** (`main` volume, Sonarr's own config) — on install the package seeds `AnalyticsEnabled=False`; the user may change it afterwards. On every start, before Sonarr launches, it re-asserts `ApiKey` (from `store.json`), `AuthenticationMethod=Forms`, `AuthenticationRequired=Enabled`, `BindAddress=*`, `Port=8989`, `UrlBase` empty, and `TrustedNetworks` set to the StartOS bridge gateway, so Sonarr honors the proxy's forwarded headers. Every other key belongs to Sonarr and survives hand edits.
+| File            | Format | Modelled                  | Written by                                        |
+| --------------- | ------ | ------------------------- | ------------------------------------------------- |
+| `store.json`    | JSON   | Yes — `FileHelper.json`   | Install init (`apiKey`), the actions, `reconcile` |
+| `config.xml`    | XML    | Yes — `FileHelper.xml`    | Install init, then `setupMain` on every start     |
+| `share/api-key` | text   | Yes — `FileHelper.string` | Every init, from `store.json` `apiKey`            |
 
-Sonarr's `admin` username and password live in its database; `reconcile` re-applies them whenever the stored password stops logging in, so a credential change made in **Settings > General** is reverted at the next start. The download client whose id is `qbittorrentClientId` is rewritten on every start (name, host, port, `useSsl`, `apiKey`, username and password cleared, enabled); its other settings, such as the category, belong to the user. Download clients the user adds are never touched.
+| `store.json` key       | Set by              | Notes                                                     |
+| ---------------------- | ------------------- | --------------------------------------------------------- |
+| `apiKey`               | Install             | 32 hex characters; also published at `share/api-key`      |
+| `adminPassword`        | Set Admin Password  | Plaintext, because Sonarr's API takes the password itself |
+| `mediaSources`         | Media Storage       | `filebrowser`, `nextexplorer`, or both                    |
+| `qbittorrentConnected` | Connect qBittorrent | Whether qBittorrent is connected                          |
+| `qbittorrentClientId`  | `reconcile`         | Sonarr's id for the package-managed download client       |
+
+`config.xml` is Sonarr's own file and Sonarr rewrites it whenever settings are saved. The package writes only these keys:
+
+| Key                      | When         | Value                               |
+| ------------------------ | ------------ | ----------------------------------- |
+| `ApiKey`                 | Every start  | `store.json` `apiKey`               |
+| `AuthenticationMethod`   | Every start  | `Forms`                             |
+| `AuthenticationRequired` | Every start  | `Enabled`                           |
+| `BindAddress`            | Every start  | `*`                                 |
+| `Port`                   | Every start  | `8989`                              |
+| `UrlBase`                | Every start  | empty                               |
+| `TrustedNetworks`        | Every start  | The OS's bridge address (`getOsIp`) |
+| `AnalyticsEnabled`       | Install only | `False`                             |
+
+**Writing these before Sonarr's first boot is what closes the first-run screen.** Out of the box Sonarr starts with no authentication and offers whoever loads the UI first the chance to create the login. With Forms authentication and no user yet, it redirects everyone to a login page nobody can pass until `reconcile` creates the user.
+
+**`AuthenticationRequired=Enabled` is forced because every proxied request comes from a local address.** Sonarr's "disabled for local addresses" option would otherwise open the UI to anyone who can reach the interface.
+
+**`TrustedNetworks` is the StartOS reverse proxy.** Without it Sonarr ignores `X-Forwarded-Proto`, and its login redirect sends an HTTPS browser to an `http://` URL on the HTTPS port.
+
+Everything else in `config.xml`, and every setting in the UI, is yours. Regenerating the API key in the UI does not stick: the next start restores the stored one.
 
 ## Dependencies
 
-All dependencies are optional.
+Three, all optional.
 
-| Dependency          | Kind                             | Enabled while                        | Mount / use                                                                     |
-| ------------------- | -------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
-| FileBrowser Quantum | exists                           | selected in **Media Storage**        | `data` read-write at `/mnt/filebrowser`                                         |
-| NextExplorer        | exists                           | selected in **Media Storage**        | `data` read-write at `/mnt/nextexplorer`                                        |
-| qBittorrent         | running (`primary` health check) | connected by **Connect qBittorrent** | `share/` read-only at `/mnt/qbittorrent`; download client at its bridge address |
+| Dependency     | Kind                              | Declared while            |
+| -------------- | --------------------------------- | ------------------------- |
+| `filebrowser`  | `exists`                          | Selected in Media Storage |
+| `nextexplorer` | `exists`                          | Selected in Media Storage |
+| `qbittorrent`  | `running`, health check `primary` | qBittorrent is connected  |
 
-qBittorrent's address is resolved from its web UI binding on the StartOS bridge and re-resolved reactively, so Sonarr restarts and rewrites the download client if qBittorrent's port changes.
+Sonarr reads and writes a file manager's `data` volume whether or not that service is running, so it only has to be installed. While a selected file manager is uninstalled, Sonarr mounts nothing of it and starts anyway: its root folders show as missing, the disk scan skips them, and imports into them are refused. Installing it again restarts Sonarr, which mounts it. Both serve their volume as uid 1000, the uid Sonarr runs as, so imported episodes are immediately manageable there.
+
+qBittorrent's bridge address is resolved with `getBridgeAddress` from qBittorrent's `ui-multi` host and its internal port, imported from `qbittorrent-startos`; a change to it restarts Sonarr, which re-points the download client. The key is read from `/mnt/qbittorrent/api-key` and watched the same way, so when qBittorrent's key changes Sonarr restarts and `reconcile` updates the client: the connection follows qBittorrent automatically. While qBittorrent is uninstalled its address resolves to nothing, so Sonarr mounts nothing of it, starts normally and leaves the client as it is; installing qBittorrent again restarts Sonarr, which reconnects it.
 
 ## Network Access and Interfaces
 
-One interface serves both the web UI and the API.
+One HTTP interface, serving both the web UI and the API.
 
-| Interface | Type | Port | Protocol | Purpose                     |
-| --------- | ---- | ---- | -------- | --------------------------- |
-| `ui`      | ui   | 8989 | HTTP     | Sonarr web UI and `/api/v3` |
+| Interface | Id   | Type | Port | Masked | Description                      |
+| --------- | ---- | ---- | ---- | ------ | -------------------------------- |
+| Web UI    | `ui` | ui   | 8989 | No     | The Sonarr web interface and API |
 
-The host id `ui-multi` and internal port 8989 are exported from `startos/utils.ts` as `uiHostId` and `uiPort`; Prowlarr resolves Sonarr's bridge address from both, so neither may change.
+The host id is `ui-multi` and the internal port 8989; Prowlarr resolves Sonarr's bridge address from both (exported from `startos/utils.ts` as `uiHostId` and `uiPort`), so neither may change. **`share/api-key` on the `startos` volume is the interface dependents read:** the bare API key, no newline, alone in that directory; Prowlarr mounts it read-only to connect to Sonarr. The API takes the `X-Api-Key` header; the web UI uses a session cookie.
 
 ## Installation and First-Run Flow
 
-Sonarr's first-run "create credentials" screen is never reachable: the package seeds `config.xml` with Forms authentication and an API key before Sonarr first starts, so `/` redirects to `/login` and no account can be claimed from the browser.
+Install generates the API key, seeds `config.xml`, and raises two critical tasks: Set Admin Password and Media Storage. Sonarr does not start until both are done.
 
-On install the package generates the API key and raises two critical tasks. Both must be completed before Sonarr can start; their order does not matter. On the first start `reconcile` creates the `admin` user.
+After that: Connect qBittorrent, create a root folder, and add indexers, by hand or from Prowlarr's Connect Apps action. `instructions.md` walks through it.
 
 ## Actions
 
-**Set Admin Password** (renamed **Reset Admin Password** once set) — run it on install, or whenever the password is lost.
+Three actions, all available whether or not Sonarr is running. Each writes `store.json`, and the restart that triggers applies it.
 
-- Changes `adminPassword` in `store.json`; Sonarr restarts and `reconcile` applies it. The old password is rejected from then on.
-- Takes as long as a Sonarr restart. Safe to repeat; each run mints a new password.
-- Outputs the username `admin` and the new password, shown once.
+### Set Admin Password / Reset Admin Password
 
-**Media Storage** — run it on install, or to add or remove a file manager.
+- **When:** once at setup; again to rotate the password.
+- **What it changes:** `adminPassword` in `store.json`; `reconcile` applies it to Sonarr on the restart.
+- **Cost:** seconds, then a restart.
+- **Repeat safety:** safe; each run replaces the password, the old one stops working, and StartOS asks for confirmation once a password exists.
+- **Outputs:** username `admin` and the password, masked and copyable.
 
-- Changes `mediaSources` in `store.json`, which mounts or unmounts the file managers and enables or disables their dependencies. Sonarr restarts.
-- Safe to repeat. Deselecting a file manager makes root folders and downloads under its mount point unavailable to Sonarr until it is selected again; nothing is deleted.
+### Media Storage
 
-**Connect qBittorrent** / **Disconnect qBittorrent** — a toggle; run it to add qBittorrent, or again to remove it.
+- **When:** at setup, and whenever you add or drop a file manager.
+- **What it changes:** `mediaSources` in `store.json`, which decides the mounts and which dependencies are declared.
+- **Cost:** a restart.
+- **Repeat safety:** safe. Dropping a file manager unmounts it; root folders on it go missing in Sonarr until it is selected again, and nothing on disk is touched.
 
-- Flips `qbittorrentConnected` in `store.json`; Sonarr restarts and `reconcile` creates, updates or deletes the **qBittorrent (StartOS)** download client. Disconnecting deletes only that client.
-- Takes as long as a Sonarr restart. Safe to repeat.
-- The client authenticates with qBittorrent's Web API key, read from the mount and watched: when qBittorrent's key changes, Sonarr restarts and `reconcile` rewrites the client, so the connection follows qBittorrent automatically.
+### Connect qBittorrent / Disconnect qBittorrent
+
+- **When:** once, to connect; again to disconnect. Nothing to redo when qBittorrent's password or key changes.
+- **What it changes:** toggles `qbittorrentConnected` in `store.json`, which declares the dependency, mounts qBittorrent's `share/` while qBittorrent is installed, and has `reconcile` create or delete the managed client. StartOS asks for confirmation before disconnecting.
+- **Cost:** a restart.
+- **Repeat safety:** safe; connecting again reuses the one package-managed client.
 
 ## Tasks
 
-Two critical tasks appear on Sonarr's page.
-
-| Action               | Severity | Raised when                         | Cleared by                                        |
-| -------------------- | -------- | ----------------------------------- | ------------------------------------------------- |
-| `set-admin-password` | critical | `store.json` has no `adminPassword` | running the action                                |
-| `media-storage`      | critical | `mediaSources` is empty             | running the action with at least one file manager |
-
-Neither returns once cleared.
+| Task               | Raised when                 | Severity | Cleared by         |
+| ------------------ | --------------------------- | -------- | ------------------ |
+| Set Admin Password | No password in `store.json` | critical | Running the action |
+| Media Storage      | No file manager selected    | critical | Running the action |
 
 ## Health Checks
 
-One check, **Web Interface** (`primary`), fetches `http://127.0.0.1:8989/ping`.
+| Check         | Probes                   | Failure means                                              |
+| ------------- | ------------------------ | ---------------------------------------------------------- |
+| Web Interface | `GET /ping` on port 8989 | Sonarr is starting, migrating its database, or has crashed |
 
-It succeeds on any HTTP response, so a failure means Sonarr is not listening at all. On the first start Sonarr runs its database migrations first, which takes several seconds; connection-refused errors from the check during that window are expected in the log. A failure that persists means Sonarr crashed — read the service log.
+`/ping` answers without authentication. The `reconcile` oneshot has no check of its own; its errors are in the service log.
 
 ## Backups and Restore
 
-The `startos` and `main` volumes are copied wholesale while Sonarr is stopped. `MediaCover/` (artwork Sonarr re-downloads) and `logs/` are excluded.
+Both volumes, excluding `MediaCover/` (poster and fanart cache, re-downloaded), `logs/`, `logs.db`, and `Backups/` (Sonarr's own scheduled database copies, which the StartOS backup already covers). Sonarr is stopped during the backup, so `sonarr.db` is copied quiescent.
 
-Media in FileBrowser Quantum or NextExplorer is not part of Sonarr's backup; it belongs to those services' backups. A restored Sonarr comes back with its library, settings, download clients, API key and admin password, but its root folders work only once the same file manager is installed with the same folders.
+The episode files themselves live in FileBrowser Quantum or NextExplorer and are backed up with that service, not this one. A restore brings back the library database, settings, download clients, the API key and the admin password; restore the file manager too, or Sonarr's root folders point at episodes that are not there.
 
 ## Limitations and Differences
 
-1. Sign-in is always Forms authentication with the single `admin` account; authentication method, username and password changes made in Sonarr's UI are reverted on the next start.
-2. The API key is owned by the package; regenerating it in Sonarr's UI lasts only until the next start.
-3. Sonarr cannot store media on its own volume; a root folder must be under `/mnt/filebrowser` or `/mnt/nextexplorer`.
-4. Sonarr's built-in updater is disabled; updates come from the package.
-5. The **qBittorrent (StartOS)** download client is owned by the package while connected; edits to its connection settings in Sonarr are reverted on the next start.
+1. **Authentication cannot be turned off.** The package always applies Forms login with user `admin` on start; a different username or method set in the UI is reverted.
+2. **The API key is fixed by the package.** Regenerating it in the UI lasts only until the next start.
+3. **No local media storage.** Episodes go to FileBrowser Quantum or NextExplorer; Sonarr's own volume holds only its configuration.
+4. **The `qBittorrent (StartOS)` client's name, host, port, SSL, API key, username and password are reset on every start.** Its other settings, such as the category, are yours.
 
 ---
 
 ## Quick Reference for AI Consumers
 
 ```yaml
-package_id: sonarr
-image: lscr.io/linuxserver/sonarr
+package_id: 'sonarr'
+image: 'lscr.io/linuxserver/sonarr'
 architectures: [x86_64, aarch64]
 subcontainers: [sonarr-sub]
 volumes:
-  main: /config
-  startos: store.json (not mounted)
-file_models:
-  - store.json
-  - config.xml
-startos_managed_env_vars:
-  - PUID
-  - PGID
-  - TZ
+  main: '/config'
+  startos: 'store.json (not mounted)'
+dependency_mounts:
+  filebrowser: '/mnt/filebrowser (read-write)'
+  nextexplorer: '/mnt/nextexplorer (read-write)'
+  qbittorrent: '/mnt/qbittorrent (share/, read-only)'
+file_models: [store.json, config.xml, share/api-key]
+startos_managed_env_vars: [PUID, PGID, TZ]
 dependencies:
-  [filebrowser (optional), nextexplorer (optional), qbittorrent (optional)]
+  - { id: filebrowser, kind: exists, optional: true }
+  - { id: nextexplorer, kind: exists, optional: true }
+  - { id: qbittorrent, kind: running, optional: true }
 interfaces:
-  ui: { type: ui, port: 8989 }
-actions:
-  - set-admin-password
-  - media-storage
-  - connect-qbittorrent
+  ui: { host_id: ui-multi, port: 8989, type: ui, protocol: http }
+actions: [set-admin-password, media-storage, connect-qbittorrent]
 tasks:
   - { action: set-admin-password, severity: critical }
   - { action: media-storage, severity: critical }
-health_checks:
-  - primary
+health_checks: [primary]
+oneshots: [reconcile]
+api_key: 'store.json apiKey (startos volume); published at startos share/api-key on every init; enforced into config.xml ApiKey on every start'
 ```
