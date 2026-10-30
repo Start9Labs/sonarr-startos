@@ -60,7 +60,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
     mountpoint: '/config',
     readonly: false,
   })
-  if (store.mediaSources.includes('filebrowser')) {
+  const installed = (id: 'filebrowser' | 'nextexplorer') =>
+    sdk.getServiceManifest(effects, id, (m) => m !== null).const()
+  if (
+    store.mediaSources.includes('filebrowser') &&
+    (await installed('filebrowser'))
+  ) {
     mounts = mounts.mountDependency<typeof filebrowserManifest>({
       dependencyId: 'filebrowser',
       volumeId: 'data',
@@ -69,7 +74,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
       readonly: false,
     })
   }
-  if (store.mediaSources.includes('nextexplorer')) {
+  if (
+    store.mediaSources.includes('nextexplorer') &&
+    (await installed('nextexplorer'))
+  ) {
     mounts = mounts.mountDependency<typeof nextexplorerManifest>({
       dependencyId: 'nextexplorer',
       volumeId: 'data',
@@ -79,7 +87,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
     })
   }
 
-  if (store.qbittorrentConnected) {
+  // The address is null while qBittorrent is uninstalled, when its volume can't be mounted.
+  if (qbittorrentAddress) {
     mounts = mounts.mountDependency<typeof qbittorrentManifest>({
       dependencyId: 'qbittorrent',
       volumeId: 'main',
@@ -96,7 +105,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'sonarr-sub',
   )
 
-  const qbittorrentApiKey = store.qbittorrentConnected
+  const qbittorrentApiKey = qbittorrentAddress
     ? await FileHelper.string(
         `${await subcontainer.rootfs}${qbittorrentMountpoint}/api-key`,
       )

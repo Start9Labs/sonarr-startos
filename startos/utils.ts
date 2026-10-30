@@ -12,6 +12,7 @@ const downloadClientName = 'qBittorrent (StartOS)'
 
 type DownloadClient = {
   id: number
+  name: string
   enable: boolean
   fields: { name: string; value?: unknown }[]
 }
@@ -69,9 +70,13 @@ export async function reconcile(
 
   const storedId =
     (await storeJson.read((s) => s.qbittorrentClientId).once()) ?? null
-  const current = (await api<DownloadClient[]>(apiKey, '/downloadclient')).find(
-    (c) => c.id === storedId,
-  )
+  const clients = await api<DownloadClient[]>(apiKey, '/downloadclient')
+  // A client whose id was never stored (its update or the store write failed) is found again by name, which Sonarr keeps unique ignoring case.
+  const current =
+    clients.find((c) => c.id === storedId) ??
+    clients.find(
+      (c) => c.name.toLowerCase() === downloadClientName.toLowerCase(),
+    )
   let clientId = current?.id ?? null
 
   if (!qbittorrent.connected) {
