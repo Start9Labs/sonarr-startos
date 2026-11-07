@@ -1,18 +1,18 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '4.0.20.3014:3',
+  version: '4.0.20.3014:4',
   releaseNotes: {
     en_US:
-      'Requires StartOS 0.4.1 or later. Fixes memory use growing while the service runs.',
+      'Updated the Sonarr container to 4.0.20.3014-ls3 with curl library updates; the Sonarr application is unchanged. Full notes: https://github.com/linuxserver/docker-sonarr/releases/tag/4.0.20.3014-ls3',
     es_ES:
-      'Requiere StartOS 0.4.1 o posterior. Corrige el aumento del uso de memoria mientras el servicio está en ejecución.',
+      'Contenedor de Sonarr actualizado a 4.0.20.3014-ls3 con actualizaciones de la biblioteca curl; la aplicación Sonarr no cambia. Notas completas: https://github.com/linuxserver/docker-sonarr/releases/tag/4.0.20.3014-ls3',
     de_DE:
-      'Erfordert StartOS 0.4.1 oder neuer. Behebt einen während der Laufzeit des Dienstes ansteigenden Speicherverbrauch.',
+      'Sonarr-Container auf 4.0.20.3014-ls3 mit aktualisierter curl-Bibliothek aktualisiert; die Sonarr-Anwendung bleibt unverändert. Vollständige Hinweise: https://github.com/linuxserver/docker-sonarr/releases/tag/4.0.20.3014-ls3',
     pl_PL:
-      'Wymaga StartOS 0.4.1 lub nowszego. Naprawia wzrost zużycia pamięci podczas działania usługi.',
+      'Zaktualizowano kontener Sonarr do 4.0.20.3014-ls3 z aktualizacjami biblioteki curl; aplikacja Sonarr pozostaje bez zmian. Pełne informacje: https://github.com/linuxserver/docker-sonarr/releases/tag/4.0.20.3014-ls3',
     fr_FR:
-      "Nécessite StartOS 0.4.1 ou une version ultérieure. Corrige l'augmentation de la consommation de mémoire pendant le fonctionnement du service.",
+      'Conteneur Sonarr mis à jour vers 4.0.20.3014-ls3 avec des mises à jour de la bibliothèque curl ; l’application Sonarr reste inchangée. Notes complètes : https://github.com/linuxserver/docker-sonarr/releases/tag/4.0.20.3014-ls3',
   },
   migrations: {
     up: async ({ effects }) => {},
