@@ -5,13 +5,13 @@
 Upstream is the LinuxServer image `lscr.io/linuxserver/sonarr`, pinned in `startos/manifest/index.ts`:
 
 ```typescript
-source: { dockerTag: 'lscr.io/linuxserver/sonarr:4.0.20.3014-ls329' },
+source: { dockerTag: 'lscr.io/linuxserver/sonarr:4.0.20.3014-ls3' },
 ```
 
-LinuxServer tags its stable builds `<sonarr version>-ls<build>`; its GitHub release marked Latest is the stable one (`develop-*` is not). The build number can restart (`-ls1` followed `-ls329`), so go by Latest, not by the highest number:
+LinuxServer tags its stable builds `<sonarr version>-ls<build>`; `develop-*` is not stable. The build number can restart (`-ls1` followed `-ls329`), so read the release list in publication order rather than sorting build numbers or trusting the Latest badge:
 
 ```bash
-gh release view -R linuxserver/docker-sonarr --json tagName -q .tagName
+gh api 'repos/linuxserver/docker-sonarr/releases?per_page=100' --jq '.[] | select(.draft == false and .prerelease == false) | select(.tag_name | test("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+-ls[0-9]+$")) | [.published_at, .tag_name] | @tsv'
 ```
 
 Confirm the tag ships both architectures before pinning it:
