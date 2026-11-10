@@ -10,7 +10,7 @@ export const manifest = setupManifest({
   marketingUrl: 'https://sonarr.tv/',
   donationUrl: 'https://opencollective.com/sonarr',
   description: { short, long },
-  volumes: ['startos', 'main'],
+  volumes: ['startos', 'main', 'public'],
   images: {
     sonarr: {
       source: { dockerTag: 'lscr.io/linuxserver/sonarr:4.0.20.3014-ls4' },

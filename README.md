@@ -57,15 +57,16 @@ The `reconcile` oneshot runs in the package's JavaScript context once `primary` 
 
 ## Volume and Data Layout
 
-Two volumes of its own, plus a read-write mount of each file manager the user selects.
+Three volumes of its own, plus a read-write mount of each file manager the user selects.
 
-| Volume                        | Mount Point         | Purpose                                                                                                      |
-| ----------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `main`                        | `/config`           | `config.xml`, `sonarr.db`, `logs.db`, `MediaCover/`, `logs/`, and Sonarr's own scheduled database copies     |
-| `startos`                     | not mounted         | `store.json`; `share/api-key`                                                                                |
-| `filebrowser` `data`          | `/mnt/filebrowser`  | TV library and qBittorrent downloads, when FileBrowser Quantum is selected                                   |
-| `nextexplorer` `data`         | `/mnt/nextexplorer` | TV library and qBittorrent downloads, when NextExplorer is selected; one directory per NextExplorer location |
-| `qbittorrent` `main` `share/` | `/mnt/qbittorrent`  | Read-only, while connected; qBittorrent's Web API key, `api-key`                                             |
+| Volume                 | Mount Point         | Purpose                                                                                                      |
+| ---------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `main`                 | `/config`           | `config.xml`, `sonarr.db`, `logs.db`, `MediaCover/`, `logs/`, and Sonarr's own scheduled database copies     |
+| `startos`              | not mounted         | `store.json`                                                                                                 |
+| `public`               | not mounted         | `api-key`, for Prowlarr to mount read-only                                                                   |
+| `filebrowser` `data`   | `/mnt/filebrowser`  | TV library and qBittorrent downloads, when FileBrowser Quantum is selected                                   |
+| `nextexplorer` `data`  | `/mnt/nextexplorer` | TV library and qBittorrent downloads, when NextExplorer is selected; one directory per NextExplorer location |
+| `qbittorrent` `public` | `/mnt/qbittorrent`  | Read-only, while connected; qBittorrent's Web API key, `api-key`                                             |
 
 **The mount points are a contract with qBittorrent and Jellyfin.** qBittorrent mounts the same volumes at the same paths, so a path qBittorrent reports for a finished download is the path Sonarr sees: no remote path mapping is needed, and a root folder on the same volume as the download lets Sonarr hardlink instead of copy. Changing either mount point breaks that.
 
@@ -73,19 +74,19 @@ Two volumes of its own, plus a read-write mount of each file manager the user se
 
 Three models.
 
-| File            | Format | Modelled                  | Written by                                        |
-| --------------- | ------ | ------------------------- | ------------------------------------------------- |
-| `store.json`    | JSON   | Yes — `FileHelper.json`   | Install init (`apiKey`), the actions, `reconcile` |
-| `config.xml`    | XML    | Yes — `FileHelper.xml`    | Install init, then `setupMain` on every start     |
-| `share/api-key` | text   | Yes — `FileHelper.string` | Every init, from `store.json` `apiKey`            |
+| File                 | Format | Modelled                  | Written by                                        |
+| -------------------- | ------ | ------------------------- | ------------------------------------------------- |
+| `store.json`         | JSON   | Yes — `FileHelper.json`   | Install init (`apiKey`), the actions, `reconcile` |
+| `config.xml`         | XML    | Yes — `FileHelper.xml`    | Install init, then `setupMain` on every start     |
+| `api-key` (`public`) | text   | Yes — `FileHelper.string` | Every init, from `store.json` `apiKey`            |
 
-| `store.json` key       | Set by              | Notes                                                     |
-| ---------------------- | ------------------- | --------------------------------------------------------- |
-| `apiKey`               | Install             | 32 hex characters; also published at `share/api-key`      |
-| `adminPassword`        | Set Admin Password  | Plaintext, because Sonarr's API takes the password itself |
-| `mediaSources`         | Media Storage       | `filebrowser`, `nextexplorer`, or both                    |
-| `qbittorrentConnected` | Connect qBittorrent | Whether qBittorrent is connected                          |
-| `qbittorrentClientId`  | `reconcile`         | Sonarr's id for the package-managed download client       |
+| `store.json` key       | Set by              | Notes                                                      |
+| ---------------------- | ------------------- | ---------------------------------------------------------- |
+| `apiKey`               | Install             | 32 hex characters; also published as `api-key` on `public` |
+| `adminPassword`        | Set Admin Password  | Plaintext, because Sonarr's API takes the password itself  |
+| `mediaSources`         | Media Storage       | `filebrowser`, `nextexplorer`, or both                     |
+| `qbittorrentConnected` | Connect qBittorrent | Whether qBittorrent is connected                           |
+| `qbittorrentClientId`  | `reconcile`         | Sonarr's id for the package-managed download client        |
 
 `config.xml` is Sonarr's own file and Sonarr rewrites it whenever settings are saved. The package writes only these keys:
 
@@ -130,7 +131,7 @@ One HTTP interface, serving both the web UI and the API.
 | --------- | ---- | ---- | ---- | ------ | -------------------------------- |
 | Web UI    | `ui` | ui   | 8989 | No     | The Sonarr web interface and API |
 
-The host id is `ui-multi` and the internal port 8989; Prowlarr resolves Sonarr's bridge address from both (exported from `startos/utils.ts` as `uiHostId` and `uiPort`), so neither may change. **`share/api-key` on the `startos` volume is the interface dependents read:** the bare API key, no newline, alone in that directory; Prowlarr mounts it read-only to connect to Sonarr. The API takes the `X-Api-Key` header; the web UI uses a session cookie.
+The host id is `ui-multi` and the internal port 8989; Prowlarr resolves Sonarr's bridge address from both (exported from `startos/utils.ts` as `uiHostId` and `uiPort`), so neither may change. **`api-key` at the root of the `public` volume is the interface dependents read:** the bare API key, no newline, alone on that volume; Prowlarr mounts `public` read-only to connect to Sonarr. The API takes the `X-Api-Key` header; the web UI uses a session cookie.
 
 ## Installation and First-Run Flow
 
@@ -160,7 +161,7 @@ Three actions, all available whether or not Sonarr is running. Each writes `stor
 ### Connect qBittorrent / Disconnect qBittorrent
 
 - **When:** once, to connect; again to disconnect. Nothing to redo when qBittorrent's password or key changes.
-- **What it changes:** toggles `qbittorrentConnected` in `store.json`, which declares the dependency, mounts qBittorrent's `share/` while qBittorrent is installed, and has `reconcile` create or delete the managed client. StartOS asks for confirmation before disconnecting.
+- **What it changes:** toggles `qbittorrentConnected` in `store.json`, which declares the dependency, mounts qBittorrent's `public` volume while qBittorrent is installed, and has `reconcile` create or delete the managed client. StartOS asks for confirmation before disconnecting.
 - **Cost:** a restart.
 - **Repeat safety:** safe; connecting again reuses the one package-managed client.
 
@@ -181,7 +182,7 @@ Three actions, all available whether or not Sonarr is running. Each writes `stor
 
 ## Backups and Restore
 
-Both volumes, excluding `MediaCover/` (poster and fanart cache, re-downloaded), `logs/`, `logs.db`, and `Backups/` (Sonarr's own scheduled database copies, which the StartOS backup already covers). Sonarr is stopped during the backup, so `sonarr.db` is copied quiescent.
+The `startos` and `main` volumes, excluding `MediaCover/` (poster and fanart cache, re-downloaded), `logs/`, `logs.db`, and `Backups/` (Sonarr's own scheduled database copies, which the StartOS backup already covers). Sonarr is stopped during the backup, so `sonarr.db` is copied quiescent. The `public` volume is not backed up; init rewrites `api-key` from `store.json`.
 
 The episode files themselves live in FileBrowser Quantum or NextExplorer and are backed up with that service, not this one. A restore brings back the library database, settings, download clients, the API key and the admin password; restore the file manager too, or Sonarr's root folders point at episodes that are not there.
 
@@ -204,11 +205,12 @@ subcontainers: [sonarr-sub]
 volumes:
   main: '/config'
   startos: 'store.json (not mounted)'
+  public: 'api-key (not mounted); Prowlarr mounts it read-only'
 dependency_mounts:
   filebrowser: '/mnt/filebrowser (read-write)'
   nextexplorer: '/mnt/nextexplorer (read-write)'
-  qbittorrent: '/mnt/qbittorrent (share/, read-only)'
-file_models: [store.json, config.xml, share/api-key]
+  qbittorrent: '/mnt/qbittorrent (public, read-only)'
+file_models: [store.json, config.xml, public/api-key]
 startos_managed_env_vars: [PUID, PGID, TZ]
 dependencies:
   - { id: filebrowser, kind: exists, optional: true }
@@ -222,5 +224,5 @@ tasks:
   - { action: media-storage, severity: critical }
 health_checks: [primary]
 oneshots: [reconcile]
-api_key: 'store.json apiKey (startos volume); published at startos share/api-key on every init; enforced into config.xml ApiKey on every start'
+api_key: 'store.json apiKey (startos volume); published as public api-key on every init; enforced into config.xml ApiKey on every start'
 ```

@@ -91,8 +91,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
   if (qbittorrentAddress) {
     mounts = mounts.mountDependency<typeof qbittorrentManifest>({
       dependencyId: 'qbittorrent',
-      volumeId: 'main',
-      subpath: 'share',
+      volumeId: 'public',
+      subpath: null,
       mountpoint: qbittorrentMountpoint,
       readonly: true,
     })
