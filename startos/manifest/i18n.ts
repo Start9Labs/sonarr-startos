@@ -1,3 +1,11 @@
+export const nzbgetDescription = {
+  en_US: 'Optional. Managed Usenet downloads through Connect NZBGet.',
+  es_ES: 'Opcional. Descargas de Usenet gestionadas mediante Conectar NZBGet.',
+  de_DE: 'Optional. Verwaltete Usenet-Downloads über NZBGet verbinden.',
+  pl_PL: 'Opcjonalne. Zarządzane pobrania z Usenetu przez Połącz NZBGet.',
+  fr_FR: 'Facultatif. Téléchargements Usenet gérés via Connecter NZBGet.',
+}
+
 export const short = {
   en_US: 'Automatically find, download, and organize TV shows',
   es_ES: 'Busca, descarga y organiza series de TV automáticamente',

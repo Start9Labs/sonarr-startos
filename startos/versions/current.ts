@@ -1,27 +1,18 @@
-import { rm } from 'fs/promises'
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
-import { sdk } from '../sdk'
 
 export const current = VersionInfo.of({
-  version: '4.0.20.3014:7',
+  version: '4.0.20.3014:8',
   releaseNotes: {
-    en_US: 'Connecting qBittorrent now requires qBittorrent 5.3.0:5 or later.',
+    en_US:
+      'Added Connect NZBGet with automatic credentials and a separate download category. Select the same shared storage as NZBGet for imports. Requires StartOS 0.4.2 or later.',
     es_ES:
-      'Conectar qBittorrent ahora requiere qBittorrent 5.3.0:5 o posterior.',
+      'Se añadió Conectar NZBGet con credenciales automáticas y una categoría de descargas independiente. Seleccione el mismo almacenamiento compartido que NZBGet para importar. Requiere StartOS 0.4.2 o posterior.',
     de_DE:
-      'Die Verbindung mit qBittorrent erfordert jetzt qBittorrent 5.3.0:5 oder neuer.',
+      'NZBGet verbinden mit automatischen Zugangsdaten und eigener Downloadkategorie hinzugefügt. Für Importe denselben gemeinsamen Speicher wie NZBGet wählen. Erfordert StartOS 0.4.2 oder neuer.',
     pl_PL:
-      'Połączenie z qBittorrent wymaga teraz qBittorrent 5.3.0:5 lub nowszego.',
+      'Dodano Połącz NZBGet z automatycznymi danymi logowania i osobną kategorią pobrań. Do importu wybierz ten sam współdzielony magazyn co NZBGet. Wymaga StartOS 0.4.2 lub nowszego.',
     fr_FR:
-      'La connexion à qBittorrent nécessite désormais qBittorrent 5.3.0:5 ou une version ultérieure.',
+      'Ajout de Connecter NZBGet avec identifiants automatiques et catégorie de téléchargement distincte. Sélectionnez le même stockage partagé que NZBGet pour les imports. Nécessite StartOS 0.4.2 ou ultérieur.',
   },
-  migrations: {
-    up: async () => {
-      await rm(sdk.volumes.startos.subpath('share'), {
-        recursive: true,
-        force: true,
-      })
-    },
-    down: IMPOSSIBLE,
-  },
+  migrations: { up: async () => {}, down: IMPOSSIBLE },
 })

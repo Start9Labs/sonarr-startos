@@ -2,6 +2,12 @@ import { manifest as filebrowserManifest } from 'filebrowser-quantum-startos/sta
 import { manifest as nextexplorerManifest } from 'nextexplorer-startos/startos/manifest'
 import { manifest as qbittorrentManifest } from 'qbittorrent-startos/startos/manifest'
 import { FileHelper } from '@start9labs/start-sdk'
+import { manifest as nzbgetManifest } from 'nzbget-startos/startos/manifest'
+import { credentialsShape } from 'nzbget-startos/startos/fileModels/credentials'
+import {
+  uiHostId as nzbgetHostId,
+  uiPort as nzbgetPort,
+} from 'nzbget-startos/startos/utils'
 import {
   uiHostId as qbittorrentHostId,
   uiPort as qbittorrentPort,
@@ -14,6 +20,7 @@ import {
   filebrowserMountpoint,
   nextexplorerMountpoint,
   qbittorrentMountpoint,
+  nzbgetMountpoint,
   reconcile,
   uiPort,
 } from './utils'
@@ -27,6 +34,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       adminPassword: s.adminPassword,
       mediaSources: s.mediaSources,
       qbittorrentConnected: s.qbittorrentConnected,
+      nzbgetConnected: s.nzbgetConnected,
     }))
     .const(effects)
   if (!store?.apiKey) throw new Error('store.json has no API key')
@@ -49,6 +57,17 @@ export const main = sdk.setupMain(async ({ effects }) => {
           packageId: 'qbittorrent',
           hostId: qbittorrentHostId,
           internalPort: qbittorrentPort,
+          ssl: false,
+        })
+        .const()
+    : null
+
+  const nzbgetAddress = store.nzbgetConnected
+    ? await sdk.host
+        .getBridgeAddress(effects, {
+          packageId: 'nzbget',
+          hostId: nzbgetHostId,
+          internalPort: nzbgetPort,
           ssl: false,
         })
         .const()
@@ -98,6 +117,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
     })
   }
 
+  if (nzbgetAddress)
+    mounts = mounts.mountDependency<typeof nzbgetManifest>({
+      dependencyId: 'nzbget',
+      volumeId: 'public',
+      subpath: null,
+      mountpoint: nzbgetMountpoint,
+      readonly: true,
+    })
+
   const subcontainer = sdk.SubContainer.of(
     effects,
     { imageId: 'sonarr' },
@@ -113,6 +141,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
           (key) => key,
           (prev, next) => next === null || prev === next,
         )
+        .const(effects)
+    : null
+
+  const nzbgetCredentials = nzbgetAddress
+    ? await FileHelper.json(
+        `${await subcontainer.rootfs}${nzbgetMountpoint}/credentials.json`,
+        credentialsShape,
+      )
+        .read()
         .const(effects)
     : null
 
@@ -142,11 +179,21 @@ export const main = sdk.setupMain(async ({ effects }) => {
       subcontainer: null,
       exec: {
         fn: async () => {
-          await reconcile(effects, store.apiKey, store.adminPassword, {
-            connected: store.qbittorrentConnected,
-            apiKey: qbittorrentApiKey,
-            address: qbittorrentAddress,
-          })
+          await reconcile(
+            effects,
+            store.apiKey,
+            store.adminPassword,
+            {
+              connected: store.qbittorrentConnected,
+              apiKey: qbittorrentApiKey,
+              address: qbittorrentAddress,
+            },
+            {
+              connected: store.nzbgetConnected,
+              credentials: nzbgetCredentials,
+              address: nzbgetAddress,
+            },
+          )
           return null
         },
       },

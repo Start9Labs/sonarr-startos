@@ -1,4 +1,10 @@
 import { T } from '@start9labs/start-sdk'
+import {
+  ArrApi,
+  NzbgetConnection,
+  downloadClientAddressFields,
+  reconcileArrDownloadClient,
+} from 'nzbget-startos/startos/utils'
 import { storeJson } from './fileModels/store.json'
 
 export const uiPort = 8989
@@ -7,15 +13,7 @@ export const adminUsername = 'admin'
 export const filebrowserMountpoint = '/mnt/filebrowser'
 export const nextexplorerMountpoint = '/mnt/nextexplorer'
 export const qbittorrentMountpoint = '/mnt/qbittorrent'
-
-const downloadClientName = 'qBittorrent (StartOS)'
-
-type DownloadClient = {
-  id: number
-  name: string
-  enable: boolean
-  fields: { name: string; value?: unknown }[]
-}
+export const nzbgetMountpoint = '/mnt/nzbget'
 
 const local = `http://127.0.0.1:${uiPort}`
 
@@ -55,6 +53,7 @@ export async function reconcile(
     apiKey: string | null
     address: string | null
   },
+  nzbget: NzbgetConnection,
 ) {
   if (adminPassword && !(await canLogIn(adminPassword))) {
     const host = await api<object>(apiKey, '/config/host')
@@ -67,60 +66,42 @@ export async function reconcile(
       passwordConfirmation: adminPassword,
     })
   }
-
-  const storedId =
-    (await storeJson.read((s) => s.qbittorrentClientId).once()) ?? null
-  const clients = await api<DownloadClient[]>(apiKey, '/downloadclient')
-  // A client whose id was never stored (its update or the store write failed) is found again by name, which Sonarr keeps unique ignoring case.
-  const current =
-    clients.find((c) => c.id === storedId) ??
-    clients.find(
-      (c) => c.name.toLowerCase() === downloadClientName.toLowerCase(),
-    )
-  let clientId = current?.id ?? null
-
-  if (!qbittorrent.connected) {
-    if (current) await api(apiKey, `/downloadclient/${current.id}`, 'DELETE')
-    clientId = null
-  } else if (qbittorrent.apiKey && qbittorrent.address) {
-    const [host, port] = qbittorrent.address.split(/:(?=\d+$)/)
-    // Creating an enabled client tests the connection even with forceSave; updating with forceSave does not.
-    const record =
-      current ??
-      (await api<DownloadClient>(
-        apiKey,
-        '/downloadclient?forceSave=true',
-        'POST',
-        {
-          ...(
-            await api<{ implementation: string }[]>(
-              apiKey,
-              '/downloadclient/schema',
-            )
-          ).find((s) => s.implementation === 'QBittorrent'),
-          name: downloadClientName,
-          enable: false,
-        },
-      ))
-    const values: Record<string, unknown> = {
-      host,
-      port: Number(port),
-      useSsl: false,
-      apiKey: qbittorrent.apiKey,
-      username: '',
-      password: '',
-    }
-    await api(apiKey, `/downloadclient/${record.id}?forceSave=true`, 'PUT', {
-      ...record,
-      name: downloadClientName,
-      enable: true,
-      fields: record.fields.map((f) =>
-        f.name in values ? { ...f, value: values[f.name] } : f,
-      ),
-    })
-    clientId = record.id
-  }
-
-  if (clientId !== storedId)
-    await storeJson.merge(effects, { qbittorrentClientId: clientId })
+  const request: ArrApi = (path, method, body) =>
+    api(apiKey, path, method, body)
+  const store = await storeJson.read().once()
+  const qbittorrentClientId = await reconcileArrDownloadClient(request, {
+    storedId: store?.qbittorrentClientId ?? null,
+    name: 'qBittorrent (StartOS)',
+    implementation: 'QBittorrent',
+    connected: qbittorrent.connected,
+    values:
+      qbittorrent.address && qbittorrent.apiKey
+        ? {
+            ...downloadClientAddressFields(qbittorrent.address),
+            apiKey: qbittorrent.apiKey,
+            username: '',
+            password: '',
+          }
+        : null,
+  })
+  const nzbgetClientId = await reconcileArrDownloadClient(request, {
+    storedId: store?.nzbgetClientId ?? null,
+    name: 'NZBGet (StartOS)',
+    implementation: 'Nzbget',
+    connected: nzbget.connected,
+    values:
+      nzbget.address && nzbget.credentials
+        ? {
+            ...downloadClientAddressFields(nzbget.address),
+            username: nzbget.credentials.username,
+            password: nzbget.credentials.password,
+          }
+        : null,
+    defaults: { tvCategory: 'sonarr' },
+  })
+  if (
+    qbittorrentClientId !== (store?.qbittorrentClientId ?? null) ||
+    nzbgetClientId !== (store?.nzbgetClientId ?? null)
+  )
+    await storeJson.merge(effects, { qbittorrentClientId, nzbgetClientId })
 }
