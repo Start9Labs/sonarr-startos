@@ -1,11 +1,3 @@
-export const nzbgetDescription = {
-  en_US: 'Optional. Managed Usenet downloads through Connect NZBGet.',
-  es_ES: 'Opcional. Descargas de Usenet gestionadas mediante Conectar NZBGet.',
-  de_DE: 'Optional. Verwaltete Usenet-Downloads über NZBGet verbinden.',
-  pl_PL: 'Opcjonalne. Zarządzane pobrania z Usenetu przez Połącz NZBGet.',
-  fr_FR: 'Facultatif. Téléchargements Usenet gérés via Connecter NZBGet.',
-}
-
 export const short = {
   en_US: 'Automatically find, download, and organize TV shows',
   es_ES: 'Busca, descarga y organiza series de TV automáticamente',
@@ -64,4 +56,17 @@ export const qbittorrentDescription = {
     'Opcjonalne. Sonarr przekazuje pobrania do qBittorrent po połączeniu go akcją Połącz qBittorrent.',
   fr_FR:
     "Optionnel. Sonarr envoie les téléchargements à qBittorrent une fois connecté avec l'action Connecter qBittorrent.",
+}
+
+export const nzbgetDescription = {
+  en_US:
+    'Optional. Lets Sonarr send Usenet downloads to NZBGet. Enabled with Connect NZBGet.',
+  es_ES:
+    'Opcional. Permite que Sonarr envíe descargas de Usenet a NZBGet. Se activa con Conectar NZBGet.',
+  de_DE:
+    'Optional. Ermöglicht Sonarr, Usenet-Downloads an NZBGet zu senden. Aktivierung über NZBGet verbinden.',
+  pl_PL:
+    'Opcjonalne. Pozwala Sonarr wysyłać pobrania z Usenetu do NZBGet. Włączane w Połącz NZBGet.',
+  fr_FR:
+    'Optionnel. Permet à Sonarr d’envoyer les téléchargements Usenet à NZBGet. À activer avec Connecter NZBGet.',
 }
