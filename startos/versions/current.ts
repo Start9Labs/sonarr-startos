@@ -1,27 +1,21 @@
-import { rm } from 'fs/promises'
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
-import { sdk } from '../sdk'
 
 export const current = VersionInfo.of({
-  version: '4.0.20.3014:7',
+  version: '4.0.20.3014:9',
   releaseNotes: {
-    en_US: 'Connecting qBittorrent now requires qBittorrent 5.3.0:5 or later.',
+    en_US:
+      'Rebuilt on an updated LinuxServer image of Sonarr 4.0.20.3014 with refreshed system packages; Sonarr itself is unchanged.',
     es_ES:
-      'Conectar qBittorrent ahora requiere qBittorrent 5.3.0:5 o posterior.',
+      'Reconstruido sobre una imagen actualizada de LinuxServer de Sonarr 4.0.20.3014 con paquetes del sistema renovados; Sonarr no cambia.',
     de_DE:
-      'Die Verbindung mit qBittorrent erfordert jetzt qBittorrent 5.3.0:5 oder neuer.',
+      'Neu erstellt auf einem aktualisierten LinuxServer-Image von Sonarr 4.0.20.3014 mit aufgefrischten Systempaketen; Sonarr selbst ist unverändert.',
     pl_PL:
-      'Połączenie z qBittorrent wymaga teraz qBittorrent 5.3.0:5 lub nowszego.',
+      'Przebudowano na zaktualizowanym obrazie LinuxServer Sonarr 4.0.20.3014 z odświeżonymi pakietami systemowymi; sam Sonarr się nie zmienia.',
     fr_FR:
-      'La connexion à qBittorrent nécessite désormais qBittorrent 5.3.0:5 ou une version ultérieure.',
+      'Reconstruit sur une image LinuxServer mise à jour de Sonarr 4.0.20.3014 avec des paquets système actualisés ; Sonarr lui-même est inchangé.',
   },
   migrations: {
-    up: async () => {
-      await rm(sdk.volumes.startos.subpath('share'), {
-        recursive: true,
-        force: true,
-      })
-    },
+    up: async ({ effects }) => {},
     down: IMPOSSIBLE,
   },
 })
