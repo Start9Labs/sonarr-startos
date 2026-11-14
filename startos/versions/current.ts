@@ -1,7 +1,7 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '4.0.20.3014:8',
+  version: '4.0.20.3014:9',
   releaseNotes: {
     en_US:
       'Rebuilt on an updated LinuxServer image of Sonarr 4.0.20.3014 with refreshed system packages; Sonarr itself is unchanged.',
