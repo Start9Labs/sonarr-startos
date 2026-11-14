@@ -149,7 +149,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         `${await subcontainer.rootfs}${nzbgetMountpoint}/credentials.json`,
         credentialsShape,
       )
-        .read()
+        .read(({ username, password }) => ({ username, password }))
         .const(effects)
     : null
 
