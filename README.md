@@ -58,7 +58,7 @@ The `reconcile` oneshot runs in the package's JavaScript context once `primary` 
 
 ## Volume and Data Layout
 
-Three volumes of its own, plus a read-write mount of each file manager the user selects.
+Three volumes of its own, plus a read-write mount of each file manager the user selects and a read-only mount of each connected and installed download client's `public` volume.
 
 | Volume                 | Mount Point         | Purpose                                                                                                  |
 | ---------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
