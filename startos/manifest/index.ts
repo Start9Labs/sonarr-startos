@@ -13,7 +13,7 @@ export const manifest = setupManifest({
   volumes: ['startos', 'main', 'public'],
   images: {
     sonarr: {
-      source: { dockerTag: 'lscr.io/linuxserver/sonarr:4.0.20.3014-ls4' },
+      source: { dockerTag: 'lscr.io/linuxserver/sonarr:4.0.20.3014-ls5' },
       arch: ['x86_64', 'aarch64'],
     },
   },
