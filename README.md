@@ -175,9 +175,9 @@ Four actions, all available whether or not Sonarr is running. Each writes `store
 ### Connect NZBGet / Disconnect NZBGet
 
 - **When:** once, to connect; again to disconnect. Nothing to redo when NZBGet's admin password changes. Completed downloads are importable only from a file manager also selected in Media Storage.
-- **What it changes:** toggles `nzbgetConnected` in `store.json`, which declares the dependency, mounts NZBGet's `public` volume while NZBGet is installed, and has `reconcile` create or delete the managed client. StartOS asks for confirmation before disconnecting.
+- **What it changes:** toggles `nzbgetConnected` in `store.json`, which declares the dependency, mounts NZBGet's `public` volume while NZBGet is installed, and has `reconcile` create, update or delete `NZBGet (StartOS)`. The package reapplies its name, enabled state, host, port, SSL flag, username and password using NZBGet's restricted login, not its admin password. Creation seeds the `sonarr` category defined by NZBGet; later category changes remain user-owned.
 - **Cost:** a restart.
-- **Repeat safety:** safe; connecting again reuses the one package-managed client. Disconnecting leaves the qBittorrent client and clients you added yourself untouched.
+- **Repeat safety:** repeating the action reverses selection; repeated reconciliation reuses the one package-managed client. Disconnecting leaves the qBittorrent client and manually added clients with other names untouched.
 
 ## Tasks
 
@@ -198,14 +198,14 @@ Four actions, all available whether or not Sonarr is running. Each writes `store
 
 The `startos` and `main` volumes, excluding `MediaCover/` (poster and fanart cache, re-downloaded), `logs/`, `logs.db`, and `Backups/` (Sonarr's own scheduled database copies, which the StartOS backup already covers). Sonarr is stopped during the backup, so `sonarr.db` is copied quiescent. The `public` volume is not backed up; init rewrites `api-key` from `store.json`.
 
-The episode files themselves live in FileBrowser Quantum or NextExplorer and are backed up with that service, not this one. A restore brings back the library database, settings, download clients, the API key and the admin password; restore the file manager too, or Sonarr's root folders point at episodes that are not there.
+The episode files themselves live in FileBrowser Quantum or NextExplorer and are backed up with that service, not this one. A restore brings back the library database, settings, download clients, the API key and the admin password; restore the file manager too, or Sonarr's root folders point at episodes that are not there. The next start reconciles each managed download client with its downloader's live address and credentials.
 
 ## Limitations and Differences
 
 1. **Authentication cannot be turned off.** The package always applies Forms login with user `admin` on start; a different username or method set in the UI is reverted.
 2. **The API key is fixed by the package.** Regenerating it in the UI lasts only until the next start.
 3. **No local media storage.** Episodes go to FileBrowser Quantum or NextExplorer; Sonarr's own volume holds only its configuration.
-4. **The `qBittorrent (StartOS)` and `NZBGet (StartOS)` clients' name, host, port, SSL, username and password, and qBittorrent's API key, are reset on every start.** Their other settings, such as the category, are yours.
+4. **The `qBittorrent (StartOS)` and `NZBGet (StartOS)` clients' name, enabled state, host, port, SSL, username and password, and qBittorrent's API key, are reset on every start.** Their other settings, such as the category, are yours.
 
 ---
 
