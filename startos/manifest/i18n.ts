@@ -57,3 +57,16 @@ export const qbittorrentDescription = {
   fr_FR:
     "Optionnel. Sonarr envoie les téléchargements à qBittorrent une fois connecté avec l'action Connecter qBittorrent.",
 }
+
+export const nzbgetDescription = {
+  en_US:
+    'Optional. Lets Sonarr send Usenet downloads to NZBGet. Enabled with Connect NZBGet.',
+  es_ES:
+    'Opcional. Permite que Sonarr envíe descargas de Usenet a NZBGet. Se activa con Conectar NZBGet.',
+  de_DE:
+    'Optional. Ermöglicht Sonarr, Usenet-Downloads an NZBGet zu senden. Aktivierung über NZBGet verbinden.',
+  pl_PL:
+    'Opcjonalne. Pozwala Sonarr wysyłać pobrania z Usenetu do NZBGet. Włączane w Połącz NZBGet.',
+  fr_FR:
+    'Optionnel. Permet à Sonarr d’envoyer les téléchargements Usenet à NZBGet. À activer avec Connecter NZBGet.',
+}

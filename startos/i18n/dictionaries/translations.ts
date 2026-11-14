@@ -27,6 +27,10 @@ export default {
     22: 'Elimina el cliente de descargas qBittorrent (StartOS) de Sonarr.',
     23: 'Conectar qBittorrent',
     24: 'Añade qBittorrent de este servidor como cliente de descargas en Sonarr. Cambiarlo reinicia Sonarr.',
+    25: 'Desconectar NZBGet',
+    26: 'Conectar NZBGet',
+    27: 'Gestiona el cliente de descargas NZBGet. Cambiar la conexión reinicia el servicio; seleccione el mismo almacenamiento compartido para importar.',
+    28: 'Elimina únicamente el cliente de descargas NZBGet (StartOS).',
   },
   de_DE: {
     0: 'Starte Sonarr!',
@@ -54,6 +58,10 @@ export default {
     22: 'Entfernt den Download-Client qBittorrent (StartOS) aus Sonarr.',
     23: 'qBittorrent verbinden',
     24: 'Fügt qBittorrent auf diesem Server als Download-Client in Sonarr hinzu. Eine Änderung startet Sonarr neu.',
+    25: 'NZBGet trennen',
+    26: 'NZBGet verbinden',
+    27: 'Verwaltet den NZBGet-Download-Client. Eine Verbindungsänderung startet den Dienst neu; für Importe denselben gemeinsamen Speicher wählen.',
+    28: 'Entfernt nur den Download-Client NZBGet (StartOS).',
   },
   pl_PL: {
     0: 'Uruchamianie Sonarr!',
@@ -81,6 +89,10 @@ export default {
     22: 'Usuwa klienta pobierania qBittorrent (StartOS) z Sonarr.',
     23: 'Połącz qBittorrent',
     24: 'Dodaje qBittorrent z tego serwera jako klienta pobierania w Sonarr. Zmiana uruchamia Sonarr ponownie.',
+    25: 'Odłącz NZBGet',
+    26: 'Połącz NZBGet',
+    27: 'Zarządza klientem pobierania NZBGet. Zmiana połączenia uruchamia usługę ponownie; do importu wybierz ten sam współdzielony magazyn.',
+    28: 'Usuwa tylko klienta pobierania NZBGet (StartOS).',
   },
   fr_FR: {
     0: 'Démarrage de Sonarr !',
@@ -108,5 +120,9 @@ export default {
     22: 'Supprime le client de téléchargement qBittorrent (StartOS) de Sonarr.',
     23: 'Connecter qBittorrent',
     24: 'Ajoute qBittorrent de ce serveur comme client de téléchargement dans Sonarr. Le modifier redémarre Sonarr.',
+    25: 'Déconnecter NZBGet',
+    26: 'Connecter NZBGet',
+    27: 'Gère le client de téléchargement NZBGet. Modifier la connexion redémarre le service ; sélectionnez le même stockage partagé pour les imports.',
+    28: 'Supprime uniquement le client de téléchargement NZBGet (StartOS).',
   },
 } satisfies Record<string, LangDict>
