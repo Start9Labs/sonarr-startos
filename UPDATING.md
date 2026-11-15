@@ -25,3 +25,4 @@ docker manifest inspect lscr.io/linuxserver/sonarr:<tag> | jq -r '.manifests[].p
 1. Read Sonarr's release notes (`gh release view -R Sonarr/Sonarr v<version>`) between the old and new versions. A major version can change the host-config API or `config.xml` keys this package writes; check both against `startos/main.ts` and `startos/fileModels/config.xml.ts`.
 2. Edit `dockerTag` in `startos/manifest/index.ts`.
 3. Edit `startos/versions/current.ts`: the version is the Sonarr version without the `-ls` suffix (`'4.0.20.3014:0'`). A new LinuxServer build of the same Sonarr version is a downstream revision bump (`:1`).
+4. Confirm the API still accepts host-config credential updates, the qBittorrent schema still supports API-key authentication, and the `Nzbget` schema still has `host`, `port`, `useSsl`, `username`, `password` and `tvCategory` fields; reconciliation silently skips a field the schema lacks. Keep the shared media mount points unchanged.
