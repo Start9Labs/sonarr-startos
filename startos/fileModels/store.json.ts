@@ -9,6 +9,8 @@ const shape = z.looseObject({
   mediaSources: z.array(z.enum(['filebrowser', 'nextexplorer'])).catch([]),
   qbittorrentConnected: z.boolean().catch(false),
   qbittorrentClientId: z.number().nullable().catch(null),
+  nzbgetConnected: z.boolean().catch(false),
+  nzbgetClientId: z.number().nullable().catch(null),
 })
 
 export const storeJson = FileHelper.json(
