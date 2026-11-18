@@ -5,6 +5,7 @@ import {
   nextexplorerDescription,
   qbittorrentDescription,
   nzbgetDescription,
+  prowlarrDescription,
 } from './manifest/i18n'
 import { sdk } from './sdk'
 
@@ -70,5 +71,20 @@ export const dependencies = sdk.Dependencies.of()
       enabled: async ({ effects }) =>
         (await storeJson.read((s) => s.qbittorrentConnected).const(effects)) ??
         false,
+    }),
+  )
+  .addDependency(
+    sdk.Dependency.optional('prowlarr', {
+      description: prowlarrDescription,
+      metadata: {
+        title: 'Prowlarr',
+        icon: 'https://raw.githubusercontent.com/Start9Labs/prowlarr-startos/fe368cd1843c6b7e2b47ef0829341a9d9d45a596/icon.svg',
+      },
+      versionRange: '>=3.0.2.5780:1',
+      kind: 'running',
+      healthChecks: ['primary'],
+      enabled: async ({ effects }) =>
+        (await storeJson.read((s) => s.prowlarrConnected).const(effects)) ===
+        true,
     }),
   )

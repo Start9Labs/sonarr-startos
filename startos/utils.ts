@@ -14,6 +14,7 @@ export const filebrowserMountpoint = '/mnt/filebrowser'
 export const nextexplorerMountpoint = '/mnt/nextexplorer'
 export const qbittorrentMountpoint = '/mnt/qbittorrent'
 export const nzbgetMountpoint = '/mnt/nzbget'
+export const prowlarrMountpoint = '/mnt/prowlarr'
 
 const local = `http://127.0.0.1:${uiPort}`
 

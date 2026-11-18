@@ -31,6 +31,10 @@ export default {
     26: 'Conectar NZBGet',
     27: 'Gestiona el cliente de descargas NZBGet. Cambiar la conexión reinicia el servicio; seleccione el mismo almacenamiento compartido para importar.',
     28: 'Elimina únicamente el cliente de descargas NZBGet (StartOS).',
+    29: 'Desconectar Prowlarr',
+    30: 'Conectar Prowlarr',
+    31: 'Sincroniza con Sonarr los indexadores de Prowlarr en este servidor. Cambiar la conexión reinicia Sonarr.',
+    32: 'Elimina la aplicación Sonarr (StartOS) de Prowlarr. Los indexadores ya sincronizados permanecen en Sonarr.',
   },
   de_DE: {
     0: 'Starte Sonarr!',
@@ -62,6 +66,10 @@ export default {
     26: 'NZBGet verbinden',
     27: 'Verwaltet den NZBGet-Download-Client. Eine Verbindungsänderung startet den Dienst neu; für Importe denselben gemeinsamen Speicher wählen.',
     28: 'Entfernt nur den Download-Client NZBGet (StartOS).',
+    29: 'Prowlarr trennen',
+    30: 'Prowlarr verbinden',
+    31: 'Synchronisiert die Indexer aus Prowlarr auf diesem Server mit Sonarr. Eine Änderung der Verbindung startet Sonarr neu.',
+    32: 'Entfernt die Anwendung Sonarr (StartOS) aus Prowlarr. Bereits synchronisierte Indexer bleiben in Sonarr.',
   },
   pl_PL: {
     0: 'Uruchamianie Sonarr!',
@@ -93,6 +101,10 @@ export default {
     26: 'Połącz NZBGet',
     27: 'Zarządza klientem pobierania NZBGet. Zmiana połączenia uruchamia usługę ponownie; do importu wybierz ten sam współdzielony magazyn.',
     28: 'Usuwa tylko klienta pobierania NZBGet (StartOS).',
+    29: 'Odłącz Prowlarr',
+    30: 'Połącz Prowlarr',
+    31: 'Synchronizuje indeksatory z Prowlarr na tym serwerze do Sonarr. Zmiana połączenia uruchamia Sonarr ponownie.',
+    32: 'Usuwa aplikację Sonarr (StartOS) z Prowlarr. Już zsynchronizowane indeksatory pozostają w Sonarr.',
   },
   fr_FR: {
     0: 'Démarrage de Sonarr !',
@@ -124,5 +136,9 @@ export default {
     26: 'Connecter NZBGet',
     27: 'Gère le client de téléchargement NZBGet. Modifier la connexion redémarre le service ; sélectionnez le même stockage partagé pour les imports.',
     28: 'Supprime uniquement le client de téléchargement NZBGet (StartOS).',
+    29: 'Déconnecter Prowlarr',
+    30: 'Connecter Prowlarr',
+    31: 'Synchronise avec Sonarr les indexeurs de Prowlarr sur ce serveur. Modifier la connexion redémarre Sonarr.',
+    32: 'Supprime l’application Sonarr (StartOS) de Prowlarr. Les indexeurs déjà synchronisés restent dans Sonarr.',
   },
 } satisfies Record<string, LangDict>

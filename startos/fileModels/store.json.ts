@@ -11,6 +11,9 @@ const shape = z.looseObject({
   qbittorrentClientId: z.number().nullable().catch(null),
   nzbgetConnected: z.boolean().catch(false),
   nzbgetClientId: z.number().nullable().catch(null),
+  // Null until decided; Prowlarr's existing record for this app decides it.
+  prowlarrConnected: z.boolean().nullable().catch(null),
+  prowlarrAppId: z.number().nullable().catch(null),
 })
 
 export const storeJson = FileHelper.json(

@@ -12,6 +12,12 @@ import {
   uiHostId as qbittorrentHostId,
   uiPort as qbittorrentPort,
 } from 'qbittorrent-startos/startos/utils'
+import { manifest as prowlarrManifest } from 'prowlarr-startos/startos/manifest'
+import {
+  reconcileProwlarrApplication,
+  uiHostId as prowlarrHostId,
+  uiPort as prowlarrPort,
+} from 'prowlarr-startos/startos/utils'
 import { configXml } from './fileModels/config.xml'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
@@ -21,7 +27,9 @@ import {
   nextexplorerMountpoint,
   qbittorrentMountpoint,
   nzbgetMountpoint,
+  prowlarrMountpoint,
   reconcile,
+  uiHostId,
   uiPort,
 } from './utils'
 
@@ -35,6 +43,9 @@ export const main = sdk.setupMain(async ({ effects }) => {
       mediaSources: s.mediaSources,
       qbittorrentConnected: s.qbittorrentConnected,
       nzbgetConnected: s.nzbgetConnected,
+      prowlarrConnected: s.prowlarrConnected,
+      prowlarrRemoval:
+        s.prowlarrConnected === false && s.prowlarrAppId !== null,
     }))
     .const(effects)
   if (!store?.apiKey) throw new Error('store.json has no API key')
@@ -68,6 +79,30 @@ export const main = sdk.setupMain(async ({ effects }) => {
           packageId: 'nzbget',
           hostId: nzbgetHostId,
           internalPort: nzbgetPort,
+          ssl: false,
+        })
+        .const()
+    : null
+
+  const prowlarrAddress =
+    store.prowlarrConnected !== false || store.prowlarrRemoval
+      ? await sdk.host
+          .getBridgeAddress(effects, {
+            packageId: 'prowlarr',
+            hostId: prowlarrHostId,
+            internalPort: prowlarrPort,
+            ssl: false,
+          })
+          .const()
+      : null
+  // An absent Prowlarr has no record left to remove.
+  if (store.prowlarrRemoval && !prowlarrAddress)
+    await storeJson.merge(effects, { prowlarrAppId: null })
+  const ownAddress = prowlarrAddress
+    ? await sdk.host
+        .getBridgeAddress(effects, {
+          hostId: uiHostId,
+          internalPort: uiPort,
           ssl: false,
         })
         .const()
@@ -126,6 +161,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
       readonly: true,
     })
 
+  if (prowlarrAddress)
+    mounts = mounts.mountDependency<typeof prowlarrManifest>({
+      dependencyId: 'prowlarr',
+      volumeId: 'public',
+      subpath: null,
+      mountpoint: prowlarrMountpoint,
+      readonly: true,
+    })
+
   const subcontainer = sdk.SubContainer.of(
     effects,
     { imageId: 'sonarr' },
@@ -150,6 +194,17 @@ export const main = sdk.setupMain(async ({ effects }) => {
         credentialsShape,
       )
         .read(({ username, password }) => ({ username, password }))
+        .const(effects)
+    : null
+
+  const prowlarrApiKey = prowlarrAddress
+    ? await FileHelper.string(
+        `${await subcontainer.rootfs}${prowlarrMountpoint}/api-key`,
+      )
+        .read(
+          (key) => key,
+          (prev, next) => next === null || prev === next,
+        )
         .const(effects)
     : null
 
@@ -198,5 +253,33 @@ export const main = sdk.setupMain(async ({ effects }) => {
         },
       },
       requires: ['primary'],
+    })
+    .addOneshot('prowlarr', {
+      subcontainer: null,
+      exec: {
+        fn: async () => {
+          if (!prowlarrAddress || !prowlarrApiKey) return null
+          const storedId =
+            (await storeJson.read((s) => s.prowlarrAppId).once()) ?? null
+          const { connected, appId } = await reconcileProwlarrApplication(
+            { address: prowlarrAddress, apiKey: prowlarrApiKey },
+            {
+              id: 'sonarr',
+              storedId,
+              connected: store.prowlarrConnected,
+              values: ownAddress
+                ? { baseUrl: `http://${ownAddress}`, apiKey: store.apiKey }
+                : null,
+            },
+          )
+          if (connected !== store.prowlarrConnected || appId !== storedId)
+            await storeJson.merge(effects, {
+              prowlarrConnected: connected,
+              prowlarrAppId: appId,
+            })
+          return null
+        },
+      },
+      requires: [],
     })
 })
