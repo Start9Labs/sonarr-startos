@@ -14,6 +14,7 @@ import {
 } from 'qbittorrent-startos/startos/utils'
 import { manifest as prowlarrManifest } from 'prowlarr-startos/startos/manifest'
 import {
+  legacyApplicationsShape,
   reconcileProwlarrApplication,
   uiHostId as prowlarrHostId,
   uiPort as prowlarrPort,
@@ -204,6 +205,16 @@ export const main = sdk.setupMain(async ({ effects }) => {
         .const(effects)
     : null
 
+  const prowlarrLegacy =
+    prowlarrAddress && store.prowlarrConnected === null
+      ? await FileHelper.json(
+          `${await subcontainer.rootfs}${prowlarrMountpoint}/legacy-applications.json`,
+          legacyApplicationsShape,
+        )
+          .read()
+          .const(effects)
+      : null
+
   return sdk.Daemons.of(effects)
     .addDaemon('primary', {
       subcontainer,
@@ -256,6 +267,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
         fn: async (_, signal) => {
           if (!prowlarrAddress && !store.prowlarrRemovalPending) return null
           if (prowlarrAddress && !prowlarrApiKey) return null
+          // An undecided connection waits for Prowlarr's legacy handoff.
+          if (
+            prowlarrAddress &&
+            store.prowlarrConnected === null &&
+            prowlarrLegacy === null
+          )
+            return null
           const storedId =
             (await storeJson.read((s) => s.prowlarrAppId).once()) ?? null
           const { connected, appId } =
@@ -266,6 +284,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
                     id: 'sonarr',
                     storedId,
                     connected: store.prowlarrConnected,
+                    legacy: prowlarrLegacy?.sonarr ?? null,
                     values: ownAddress
                       ? {
                           baseUrl: `http://${ownAddress}`,
