@@ -45,7 +45,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
       nzbgetConnected: s.nzbgetConnected,
       prowlarrConnected: s.prowlarrConnected,
       prowlarrRemoval:
-        s.prowlarrConnected === false && s.prowlarrAppId !== null,
+        s.prowlarrConnected === false &&
+        (s.prowlarrDisconnectPending || s.prowlarrAppId !== null),
     }))
     .const(effects)
   if (!store?.apiKey) throw new Error('store.json has no API key')
@@ -97,7 +98,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
       : null
   // An absent Prowlarr has no record left to remove.
   if (store.prowlarrRemoval && !prowlarrAddress)
-    await storeJson.merge(effects, { prowlarrAppId: null })
+    await storeJson.update(effects, (current) =>
+      current?.prowlarrConnected === false
+        ? {
+            ...current,
+            prowlarrAppId: null,
+            prowlarrDisconnectPending: false,
+          }
+        : null,
+    )
   const ownAddress = prowlarrAddress
     ? await sdk.host
         .getBridgeAddress(effects, {
@@ -272,11 +281,20 @@ export const main = sdk.setupMain(async ({ effects }) => {
                 : null,
             },
           )
-          if (connected !== store.prowlarrConnected || appId !== storedId)
-            await storeJson.merge(effects, {
+          await storeJson.update(effects, (current) => {
+            // In-flight reconciliation must not overwrite a later connection choice.
+            if (
+              !current ||
+              current.prowlarrConnected !== store.prowlarrConnected
+            )
+              return null
+            return {
+              ...current,
               prowlarrConnected: connected,
               prowlarrAppId: appId,
-            })
+              prowlarrDisconnectPending: false,
+            }
+          })
           return null
         },
       },

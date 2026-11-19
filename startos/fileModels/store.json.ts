@@ -14,6 +14,8 @@ const shape = z.looseObject({
   // Null until decided; Prowlarr's existing record for this app decides it.
   prowlarrConnected: z.boolean().nullable().catch(null),
   prowlarrAppId: z.number().nullable().catch(null),
+  // Persists explicit disconnection until its remote cleanup completes.
+  prowlarrDisconnectPending: z.boolean().catch(false),
 })
 
 export const storeJson = FileHelper.json(
