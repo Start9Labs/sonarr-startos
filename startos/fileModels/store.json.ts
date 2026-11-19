@@ -11,11 +11,11 @@ const shape = z.looseObject({
   qbittorrentClientId: z.number().nullable().catch(null),
   nzbgetConnected: z.boolean().catch(false),
   nzbgetClientId: z.number().nullable().catch(null),
-  // Null until decided; Prowlarr's existing record for this app decides it.
+  // Reconciliation may resolve null; explicit choices belong to the action.
   prowlarrConnected: z.boolean().nullable().catch(null),
   prowlarrAppId: z.number().nullable().catch(null),
-  // Persists explicit disconnection until its remote cleanup completes.
-  prowlarrDisconnectPending: z.boolean().catch(false),
+  // A disconnect stays pending until reconciled, even without a stored id.
+  prowlarrRemovalPending: z.boolean().catch(false),
 })
 
 export const storeJson = FileHelper.json(

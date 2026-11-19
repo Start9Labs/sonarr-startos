@@ -60,16 +60,16 @@ The `reconcile` oneshot runs in the package's JavaScript context once `primary` 
 
 Three volumes of its own, plus a read-write mount of each file manager the user selects and a read-only mount of each connected and installed download client's `public` volume.
 
-| Volume                 | Mount Point         | Purpose                                                                                                             |
-| ---------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `main`                 | `/config`           | `config.xml`, `sonarr.db`, `logs.db`, `MediaCover/`, `logs/`, and Sonarr's own scheduled database copies            |
-| `startos`              | not mounted         | `store.json`                                                                                                        |
-| `public`               | not mounted         | `api-key`, for dependents to mount read-only                                                                        |
-| `filebrowser` `data`   | `/mnt/filebrowser`  | TV library and downloads, when FileBrowser Quantum is selected                                                      |
-| `nextexplorer` `data`  | `/mnt/nextexplorer` | TV library and downloads, when NextExplorer is selected; one directory per NextExplorer location                    |
-| `qbittorrent` `public` | `/mnt/qbittorrent`  | Read-only, while connected; qBittorrent's Web API key, `api-key`                                                    |
-| `nzbget` `public`      | `/mnt/nzbget`       | Read-only, while connected; NZBGet's restricted username and password, `credentials.json`                           |
-| `prowlarr` `public`    | `/mnt/prowlarr`     | Read-only while Prowlarr is installed and the connection is on, undecided, or pending removal; Prowlarr's `api-key` |
+| Volume                 | Mount Point         | Purpose                                                                                                   |
+| ---------------------- | ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `main`                 | `/config`           | `config.xml`, `sonarr.db`, `logs.db`, `MediaCover/`, `logs/`, and Sonarr's own scheduled database copies  |
+| `startos`              | not mounted         | `store.json`                                                                                              |
+| `public`               | not mounted         | `api-key`, for dependents to mount read-only                                                              |
+| `filebrowser` `data`   | `/mnt/filebrowser`  | TV library and downloads, when FileBrowser Quantum is selected                                            |
+| `nextexplorer` `data`  | `/mnt/nextexplorer` | TV library and downloads, when NextExplorer is selected; one directory per NextExplorer location          |
+| `qbittorrent` `public` | `/mnt/qbittorrent`  | Read-only, while connected; qBittorrent's Web API key, `api-key`                                          |
+| `nzbget` `public`      | `/mnt/nzbget`       | Read-only, while connected; NZBGet's restricted username and password, `credentials.json`                 |
+| `prowlarr` `public`    | `/mnt/prowlarr`     | Read-only while Prowlarr is installed and connected, undecided, or awaiting removal; Prowlarr's `api-key` |
 
 **The mount points are a contract with qBittorrent, NZBGet and Jellyfin.** qBittorrent and NZBGet mount the same volumes at the same paths, so a path either reports for a finished download is the path Sonarr sees: no remote path mapping is needed, and a root folder on the same volume as the download lets Sonarr hardlink instead of copy. Changing either mount point breaks that.
 
@@ -83,18 +83,18 @@ Three models.
 | `config.xml`         | XML    | Yes — `FileHelper.xml`    | Install init, then `setupMain` on every start     |
 | `api-key` (`public`) | text   | Yes — `FileHelper.string` | Every init, from `store.json` `apiKey`            |
 
-| `store.json` key            | Set by                                   | Notes                                                         |
-| --------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
-| `apiKey`                    | Install                                  | 32 hex characters; also published as `api-key` on `public`    |
-| `adminPassword`             | Set Admin Password                       | Plaintext, because Sonarr's API takes the password itself     |
-| `mediaSources`              | Media Storage                            | `filebrowser`, `nextexplorer`, or both                        |
-| `qbittorrentConnected`      | Connect qBittorrent                      | Whether qBittorrent is connected                              |
-| `qbittorrentClientId`       | `reconcile`                              | Sonarr's id for `qBittorrent (StartOS)`                       |
-| `nzbgetConnected`           | Connect NZBGet                           | Whether NZBGet is connected                                   |
-| `nzbgetClientId`            | `reconcile`                              | Sonarr's id for `NZBGet (StartOS)`                            |
-| `prowlarrConnected`         | Connect Prowlarr, the `prowlarr` oneshot | Whether Prowlarr syncs to Sonarr; `null` until decided        |
-| `prowlarrAppId`             | the `prowlarr` oneshot                   | Prowlarr's id for `Sonarr (StartOS)`                          |
-| `prowlarrDisconnectPending` | Connect Prowlarr, the `prowlarr` oneshot | An explicit disconnect whose record removal has not completed |
+| `store.json` key         | Set by                                   | Notes                                                      |
+| ------------------------ | ---------------------------------------- | ---------------------------------------------------------- |
+| `apiKey`                 | Install                                  | 32 hex characters; also published as `api-key` on `public` |
+| `adminPassword`          | Set Admin Password                       | Plaintext, because Sonarr's API takes the password itself  |
+| `mediaSources`           | Media Storage                            | `filebrowser`, `nextexplorer`, or both                     |
+| `qbittorrentConnected`   | Connect qBittorrent                      | Whether qBittorrent is connected                           |
+| `qbittorrentClientId`    | `reconcile`                              | Sonarr's id for `qBittorrent (StartOS)`                    |
+| `nzbgetConnected`        | Connect NZBGet                           | Whether NZBGet is connected                                |
+| `nzbgetClientId`         | `reconcile`                              | Sonarr's id for `NZBGet (StartOS)`                         |
+| `prowlarrConnected`      | Connect Prowlarr, the `prowlarr` oneshot | Whether Prowlarr syncs to Sonarr; `null` until decided     |
+| `prowlarrAppId`          | the `prowlarr` oneshot                   | Prowlarr's id for `Sonarr (StartOS)`                       |
+| `prowlarrRemovalPending` | Connect Prowlarr, the `prowlarr` oneshot | Disconnect awaiting reconciliation, even without an id     |
 
 `config.xml` is Sonarr's own file and Sonarr rewrites it whenever settings are saved. The package writes only these keys:
 
@@ -135,9 +135,9 @@ qBittorrent's bridge address is resolved with `getBridgeAddress` from qBittorren
 
 NZBGet's bridge address is resolved the same way, from NZBGet's `ui-multi` host and internal port, imported from `nzbget-startos`. Only the `username` and `password` in `/mnt/nzbget/credentials.json` are watched: a change to either restarts Sonarr and `reconcile` updates the client, while NZBGet's other published fields, such as its download path, do not restart Sonarr. They are never copied into `store.json`; Sonarr keeps them in the client's settings. While NZBGet is uninstalled, Sonarr mounts nothing of it, starts normally and leaves the client as it is.
 
-Prowlarr's bridge address is resolved from its `ui-multi` host and internal port, imported from `prowlarr-startos`, and its API key read from `/mnt/prowlarr/api-key`; a change to either restarts Sonarr. The `prowlarr` oneshot then calls `reconcileProwlarrApplication`, imported from `prowlarr-startos`, against Prowlarr's API: connected, it creates or updates the application `Sonarr (StartOS)` in Prowlarr with Sonarr's own bridge address and API key and sync level **Full Sync**, adopting a record by its stored id, that name, or the name `Sonarr` an earlier Prowlarr release created; disconnected, it deletes that record. It does not require `primary`, and retries until Prowlarr answers. An explicit disconnect keeps cleanup pending even if an interrupted registration has not saved the application's id; reconciliation then finds the record by its reserved or legacy name. Reconciliation never overwrites a newer connection choice made by an action. While Prowlarr is uninstalled, Sonarr mounts nothing of it and starts normally, and a pending removal is dropped since nothing is left to remove. Prowlarr deletes the record itself when Sonarr is uninstalled.
+Prowlarr's bridge address is resolved from its `ui-multi` host and internal port, imported from `prowlarr-startos`, and its API key read from `/mnt/prowlarr/api-key`; a change to either restarts Sonarr. The `prowlarr` oneshot then calls `reconcileProwlarrApplication`, imported from `prowlarr-startos`, against Prowlarr's API: connected, it creates or updates the application `Sonarr (StartOS)` in Prowlarr with Sonarr's own bridge address and API key and sync level **Full Sync**, adopting a record by its stored id, that name, or the name `Sonarr` an earlier Prowlarr release created; disconnected, it deletes that record. It does not require `primary`, and retries until Prowlarr answers. While Prowlarr is uninstalled, Sonarr mounts nothing of it and starts normally, and a pending removal is dropped since nothing is left to remove. Prowlarr deletes the record itself when Sonarr is uninstalled.
 
-`prowlarrConnected` is `null` on an install updated from a release without **Connect Prowlarr**: once Prowlarr answers, the oneshot records `true` and keeps the record if Prowlarr already has one for Sonarr, and `false` otherwise. Fresh installs start at `false`.
+`prowlarrConnected` is `null` on an install updated from a release without **Connect Prowlarr**: once Prowlarr answers, the oneshot records `true` and keeps the record if Prowlarr already has one for Sonarr, and `false` otherwise. Fresh installs start at `false`. A completed reconciliation never overwrites a later action's choice. Disconnecting records `prowlarrRemovalPending` until deletion succeeds or Prowlarr is absent; a missing stored id does not prove that no record exists.
 
 ## Network Access and Interfaces
 
@@ -236,8 +236,8 @@ volumes:
   main: '/config'
   startos: 'store.json (not mounted)'
   public: 'api-key (not mounted); dependents mount it read-only'
-  prowlarr: '/mnt/prowlarr (public, read-only)'
 dependency_mounts:
+  prowlarr: '/mnt/prowlarr (public, read-only)'
   filebrowser: '/mnt/filebrowser (read-write)'
   nextexplorer: '/mnt/nextexplorer (read-write)'
   qbittorrent: '/mnt/qbittorrent (public, read-only)'

@@ -24,15 +24,15 @@ export const connectProwlarr = sdk.Action.withoutInput(
     }
   },
   async ({ effects }) => {
-    await storeJson.update(effects, (store) => {
-      if (!store) throw new Error('store.json is missing')
-      const connected = !store.prowlarrConnected
-      return {
-        ...store,
-        prowlarrConnected: connected,
-        prowlarrDisconnectPending: !connected,
-      }
-    })
+    await storeJson.update(effects, (current) =>
+      current === null
+        ? null
+        : {
+            ...current,
+            prowlarrConnected: !current.prowlarrConnected,
+            prowlarrRemovalPending: current.prowlarrConnected === true,
+          },
+    )
     return null
   },
 )
