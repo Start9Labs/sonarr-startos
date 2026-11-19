@@ -8,6 +8,7 @@ export const seedFiles = sdk.setupOnInit(async (effects, kind) => {
   await storeJson.merge(effects, {
     apiKey: utils.getDefaultString({ charset: 'a-f,0-9', len: 32 }),
     prowlarrConnected: false,
+    prowlarrLegacyPending: false,
   })
   await configXml.merge(effects, { Config: { AnalyticsEnabled: 'False' } })
 })
