@@ -1,18 +1,18 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '4.0.20.3014:9',
+  version: '4.0.20.3014:10',
   releaseNotes: {
     en_US:
-      'Added Connect NZBGet with automatic credentials and a separate download category. Select the same shared storage as NZBGet for imports. Rebuilt on an updated LinuxServer image with refreshed system packages; Sonarr itself is unchanged. Requires StartOS 0.4.2 or later.',
+      'Added Connect Prowlarr: Sonarr now connects itself to Prowlarr on this server, which syncs its indexers to Sonarr. If Prowlarr already syncs to Sonarr, the connection is kept automatically.',
     es_ES:
-      'Se añadió Conectar NZBGet con credenciales automáticas y una categoría de descargas independiente. Seleccione el mismo almacenamiento compartido que NZBGet para importar. Reconstruido sobre una imagen actualizada de LinuxServer con paquetes del sistema renovados; Sonarr no cambia. Requiere StartOS 0.4.2 o posterior.',
+      'Se añadió Conectar Prowlarr: Sonarr ahora se conecta por sí mismo a Prowlarr en este servidor, que sincroniza sus indexadores con Sonarr. Si Prowlarr ya sincroniza con Sonarr, la conexión se mantiene automáticamente.',
     de_DE:
-      'NZBGet verbinden mit automatischen Zugangsdaten und eigener Downloadkategorie hinzugefügt. Für Importe denselben gemeinsamen Speicher wie NZBGet wählen. Neu erstellt auf einem aktualisierten LinuxServer-Image mit aufgefrischten Systempaketen; Sonarr selbst ist unverändert. Erfordert StartOS 0.4.2 oder neuer.',
+      'Prowlarr verbinden hinzugefügt: Sonarr verbindet sich jetzt selbst mit Prowlarr auf diesem Server, das seine Indexer mit Sonarr synchronisiert. Synchronisiert Prowlarr bereits mit Sonarr, bleibt die Verbindung automatisch bestehen.',
     pl_PL:
-      'Dodano Połącz NZBGet z automatycznymi danymi logowania i osobną kategorią pobrań. Do importu wybierz ten sam współdzielony magazyn co NZBGet. Przebudowano na zaktualizowanym obrazie LinuxServer z odświeżonymi pakietami systemowymi; sam Sonarr się nie zmienia. Wymaga StartOS 0.4.2 lub nowszego.',
+      'Dodano Połącz Prowlarr: Sonarr sam łączy się teraz z Prowlarr na tym serwerze, który synchronizuje do niego swoje indeksatory. Jeśli Prowlarr już synchronizuje się z Sonarr, połączenie zostaje zachowane automatycznie.',
     fr_FR:
-      'Ajout de Connecter NZBGet avec identifiants automatiques et catégorie de téléchargement distincte. Sélectionnez le même stockage partagé que NZBGet pour les imports. Reconstruit sur une image LinuxServer mise à jour avec des paquets système actualisés ; Sonarr lui-même est inchangé. Nécessite StartOS 0.4.2 ou ultérieur.',
+      'Ajout de Connecter Prowlarr : Sonarr se connecte désormais lui-même à Prowlarr sur ce serveur, qui synchronise ses indexeurs avec Sonarr. Si Prowlarr synchronise déjà Sonarr, la connexion est conservée automatiquement.',
   },
   migrations: { up: async () => {}, down: IMPOSSIBLE },
 })

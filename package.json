@@ -5,7 +5,8 @@
     "nzbget-startos": "github:Start9Labs/nzbget-startos#next",
     "filebrowser-quantum-startos": "github:Start9Labs/filebrowser-quantum-startos#next",
     "nextexplorer-startos": "github:Start9Labs/nextexplorer-startos#next",
-    "qbittorrent-startos": "github:Start9Labs/qbittorrent-startos#next"
+    "qbittorrent-startos": "github:Start9Labs/qbittorrent-startos#next",
+    "prowlarr-startos": "github:Start9Labs/prowlarr-startos#next"
   },
   "overrides": {
     "@start9labs/start-sdk": "$@start9labs/start-sdk"

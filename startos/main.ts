@@ -12,6 +12,13 @@ import {
   uiHostId as qbittorrentHostId,
   uiPort as qbittorrentPort,
 } from 'qbittorrent-startos/startos/utils'
+import { manifest as prowlarrManifest } from 'prowlarr-startos/startos/manifest'
+import {
+  legacyApplicationsShape,
+  reconcileProwlarrApplication,
+  uiHostId as prowlarrHostId,
+  uiPort as prowlarrPort,
+} from 'prowlarr-startos/startos/utils'
 import { configXml } from './fileModels/config.xml'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
@@ -21,7 +28,9 @@ import {
   nextexplorerMountpoint,
   qbittorrentMountpoint,
   nzbgetMountpoint,
+  prowlarrMountpoint,
   reconcile,
+  uiHostId,
   uiPort,
 } from './utils'
 
@@ -35,6 +44,9 @@ export const main = sdk.setupMain(async ({ effects }) => {
       mediaSources: s.mediaSources,
       qbittorrentConnected: s.qbittorrentConnected,
       nzbgetConnected: s.nzbgetConnected,
+      prowlarrConnected: s.prowlarrConnected,
+      prowlarrLegacyPending: s.prowlarrLegacyPending,
+      prowlarrRemovalPending: s.prowlarrRemovalPending,
     }))
     .const(effects)
   if (!store?.apiKey) throw new Error('store.json has no API key')
@@ -68,6 +80,29 @@ export const main = sdk.setupMain(async ({ effects }) => {
           packageId: 'nzbget',
           hostId: nzbgetHostId,
           internalPort: nzbgetPort,
+          ssl: false,
+        })
+        .const()
+    : null
+
+  const prowlarrAddress =
+    store.prowlarrConnected !== false ||
+    store.prowlarrLegacyPending ||
+    store.prowlarrRemovalPending
+      ? await sdk.host
+          .getBridgeAddress(effects, {
+            packageId: 'prowlarr',
+            hostId: prowlarrHostId,
+            internalPort: prowlarrPort,
+            ssl: false,
+          })
+          .const()
+      : null
+  const ownAddress = prowlarrAddress
+    ? await sdk.host
+        .getBridgeAddress(effects, {
+          hostId: uiHostId,
+          internalPort: uiPort,
           ssl: false,
         })
         .const()
@@ -126,6 +161,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
       readonly: true,
     })
 
+  if (prowlarrAddress)
+    mounts = mounts.mountDependency<typeof prowlarrManifest>({
+      dependencyId: 'prowlarr',
+      volumeId: 'public',
+      subpath: null,
+      mountpoint: prowlarrMountpoint,
+      readonly: true,
+    })
+
   const subcontainer = sdk.SubContainer.of(
     effects,
     { imageId: 'sonarr' },
@@ -152,6 +196,27 @@ export const main = sdk.setupMain(async ({ effects }) => {
         .read(({ username, password }) => ({ username, password }))
         .const(effects)
     : null
+
+  const prowlarrApiKey = prowlarrAddress
+    ? await FileHelper.string(
+        `${await subcontainer.rootfs}${prowlarrMountpoint}/api-key`,
+      )
+        .read(
+          (key) => key,
+          (prev, next) => next === null || prev === next,
+        )
+        .const(effects)
+    : null
+
+  const prowlarrLegacy =
+    prowlarrAddress && store.prowlarrLegacyPending
+      ? await FileHelper.json(
+          `${await subcontainer.rootfs}${prowlarrMountpoint}/legacy-applications.json`,
+          legacyApplicationsShape,
+        )
+          .read((legacy) => ({ entry: legacy.sonarr ?? null }))
+          .const(effects)
+      : null
 
   return sdk.Daemons.of(effects)
     .addDaemon('primary', {
@@ -198,5 +263,62 @@ export const main = sdk.setupMain(async ({ effects }) => {
         },
       },
       requires: ['primary'],
+    })
+    .addOneshot('prowlarr', {
+      subcontainer: null,
+      exec: {
+        fn: async (_, signal) => {
+          if (!prowlarrAddress && !store.prowlarrRemovalPending) return null
+          if (prowlarrAddress && !prowlarrApiKey) return null
+          if (
+            prowlarrAddress &&
+            store.prowlarrLegacyPending &&
+            prowlarrLegacy === null
+          )
+            return null
+          const legacy = prowlarrLegacy?.entry ?? null
+          const storedId =
+            (await storeJson.read((s) => s.prowlarrAppId).once()) ??
+            legacy?.appId ??
+            null
+          const { connected, appId } =
+            prowlarrAddress && prowlarrApiKey
+              ? await reconcileProwlarrApplication(
+                  { address: prowlarrAddress, apiKey: prowlarrApiKey },
+                  {
+                    id: 'sonarr',
+                    storedId,
+                    connected: store.prowlarrConnected,
+                    legacy,
+                    values: ownAddress
+                      ? {
+                          baseUrl: `http://${ownAddress}`,
+                          apiKey: store.apiKey,
+                        }
+                      : null,
+                  },
+                )
+              : { connected: false, appId: null }
+          await storeJson.update(effects, (current) => {
+            if (
+              current === null ||
+              signal.aborted ||
+              current.prowlarrConnected !== store.prowlarrConnected ||
+              current.prowlarrLegacyPending !== store.prowlarrLegacyPending ||
+              current.prowlarrRemovalPending !== store.prowlarrRemovalPending
+            )
+              return null
+            return {
+              ...current,
+              prowlarrConnected: connected,
+              prowlarrAppId: appId,
+              prowlarrLegacyPending: false,
+              prowlarrRemovalPending: false,
+            }
+          })
+          return null
+        },
+      },
+      requires: [],
     })
 })

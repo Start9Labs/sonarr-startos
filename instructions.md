@@ -11,7 +11,7 @@
 
 - The Sonarr web interface, behind a login that is set up for you.
 - Optional managed qBittorrent and NZBGet download clients on this server, with connection details kept up to date for you.
-- Indexers from Prowlarr on this server, once you connect Sonarr from Prowlarr.
+- Indexers from Prowlarr on this server, once you run **Connect Prowlarr**.
 - Your TV library kept in FileBrowser Quantum or NextExplorer, where you can browse the files and where Jellyfin can read them.
 - Sonarr's settings, history and library database in StartOS backups. The episode files are backed up with FileBrowser Quantum or NextExplorer.
 
@@ -22,7 +22,7 @@
 3. Run **Media Storage** and choose FileBrowser Quantum, NextExplorer, or both.
 4. In qBittorrent or NZBGet, run **Set Download Location** and choose the same file manager. Sonarr can only import downloads it can see, and moves them fastest when they are on the same file manager as your library. Configure your news server in NZBGet if using Usenet.
 5. Run **Connect qBittorrent**, **Connect NZBGet**, or both.
-6. If you use Prowlarr, connect Sonarr from Prowlarr's **Connect Apps** action. Indexers you add in Prowlarr then appear in Sonarr on their own.
+6. If you use Prowlarr, run **Connect Prowlarr**. Indexers you add in Prowlarr then appear in Sonarr on their own.
 7. Start Sonarr, open the Web UI, and sign in.
 8. In your file manager, create a folder for your TV shows, such as `tv`.
 9. In Sonarr, go to **Settings → Media Management → Root Folders → Add Root Folder** and pick that folder:
@@ -36,4 +36,5 @@
 - **Media Storage** changes which file managers Sonarr can use, and restarts Sonarr.
 - **Connect qBittorrent** / **Disconnect qBittorrent** adds qBittorrent as a download client, or removes Sonarr's `qBittorrent (StartOS)` download client. The connection follows qBittorrent automatically; there is nothing to redo when qBittorrent's password changes.
 - **Connect NZBGet** / **Disconnect NZBGet** manages only `NZBGet (StartOS)`, without removing qBittorrent or manually named clients. The initial category is `sonarr`; keep it in NZBGet, or select another category consistently in both applications. Authentication follows NZBGet automatically, including after an admin-password reset. Changing the connection restarts Sonarr.
+- **Connect Prowlarr** / **Disconnect Prowlarr** adds Sonarr to Prowlarr's **Settings → Apps** as `Sonarr (StartOS)`, so Prowlarr syncs its indexers here, or removes it. Disconnecting leaves the indexers already synced; delete the ones ending in **(Prowlarr)** under **Settings → Indexers**. Changing the connection restarts Sonarr.
 - Sonarr's login is managed by StartOS: changing the username or authentication method in Sonarr's settings is undone on the next restart. Use **Reset Admin Password** instead.
