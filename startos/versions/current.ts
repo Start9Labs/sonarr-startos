@@ -1,18 +1,18 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '4.0.20.3014:10',
+  version: '4.0.20.3014:11',
   releaseNotes: {
     en_US:
-      'Added Connect Prowlarr: Sonarr now connects itself to Prowlarr on this server, which syncs its indexers to Sonarr. If Prowlarr already syncs to Sonarr, the connection is kept automatically.',
+      'Rebuilt on an updated LinuxServer image of Sonarr 4.0.20.3014 with refreshed system packages; Sonarr itself is unchanged.',
     es_ES:
-      'Se añadió Conectar Prowlarr: Sonarr ahora se conecta por sí mismo a Prowlarr en este servidor, que sincroniza sus indexadores con Sonarr. Si Prowlarr ya sincroniza con Sonarr, la conexión se mantiene automáticamente.',
+      'Reconstruido sobre una imagen actualizada de LinuxServer de Sonarr 4.0.20.3014 con paquetes del sistema renovados; Sonarr no cambia.',
     de_DE:
-      'Prowlarr verbinden hinzugefügt: Sonarr verbindet sich jetzt selbst mit Prowlarr auf diesem Server, das seine Indexer mit Sonarr synchronisiert. Synchronisiert Prowlarr bereits mit Sonarr, bleibt die Verbindung automatisch bestehen.',
+      'Neu erstellt auf einem aktualisierten LinuxServer-Image von Sonarr 4.0.20.3014 mit aufgefrischten Systempaketen; Sonarr selbst ist unverändert.',
     pl_PL:
-      'Dodano Połącz Prowlarr: Sonarr sam łączy się teraz z Prowlarr na tym serwerze, który synchronizuje do niego swoje indeksatory. Jeśli Prowlarr już synchronizuje się z Sonarr, połączenie zostaje zachowane automatycznie.',
+      'Przebudowano na zaktualizowanym obrazie LinuxServer Sonarr 4.0.20.3014 z odświeżonymi pakietami systemowymi; sam Sonarr się nie zmienia.',
     fr_FR:
-      'Ajout de Connecter Prowlarr : Sonarr se connecte désormais lui-même à Prowlarr sur ce serveur, qui synchronise ses indexeurs avec Sonarr. Si Prowlarr synchronise déjà Sonarr, la connexion est conservée automatiquement.',
+      'Reconstruit sur une image LinuxServer mise à jour de Sonarr 4.0.20.3014 avec des paquets système actualisés ; Sonarr lui-même est inchangé.',
   },
   migrations: { up: async () => {}, down: IMPOSSIBLE },
 })
